@@ -1,6 +1,6 @@
 buildscript {
     dependencies {
-        classpath "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.23.0"
+        classpath "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.23.8"
         classpath "org.jlleitschuh.gradle:ktlint-gradle:11.3.2"
     }
 }
