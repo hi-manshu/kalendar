@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.himanshoe.kalendar.foundation.component.config.KalendarDayLabelKonfig
+import com.himanshoe.kalendar.foundation.locale.KalendarLocale
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 
@@ -34,6 +35,7 @@ fun KalendarScaffold(
     dayOfWeek: () -> List<DayOfWeek>,
     kalendarDayLabelKonfig: KalendarDayLabelKonfig,
     modifier: Modifier = Modifier,
+    kalendarLocale: KalendarLocale = KalendarLocale.default(),
     dates: () -> List<LocalDate>,
     content: @Composable (LocalDate) -> Unit,
 ) {
@@ -47,8 +49,11 @@ fun KalendarScaffold(
         content = {
             if (showDayLabel) {
                 items(displayDayOfWeek) { dayOfWeek ->
+                    val localizedName = kalendarLocale.shortDayNames.getOrElse(dayOfWeek.ordinal) {
+                        dayOfWeek.name.take(kalendarDayLabelKonfig.textCharCount)
+                    }
                     Text(
-                        text = dayOfWeek.name.take(kalendarDayLabelKonfig.textCharCount),
+                        text = localizedName.take(kalendarDayLabelKonfig.textCharCount),
                         modifier = Modifier.fillMaxWidth(),
                         style = kalendarDayLabelKonfig.textStyle
                     )

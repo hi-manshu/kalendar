@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import com.himanshoe.kalendar.foundation.KalendarScaffold
+import com.himanshoe.kalendar.foundation.action.KalendarDateRange
 import com.himanshoe.kalendar.foundation.action.KalendarSelectedDayRange
 import com.himanshoe.kalendar.foundation.action.OnDaySelectionAction
 import com.himanshoe.kalendar.foundation.action.onDayClick
@@ -44,6 +45,7 @@ import com.himanshoe.kalendar.foundation.component.config.KalendarDayLabelKonfig
 import com.himanshoe.kalendar.foundation.component.config.KalendarKonfig
 import com.himanshoe.kalendar.foundation.event.KalendarEvents
 import com.himanshoe.kalendar.foundation.event.KalenderEvent
+import com.himanshoe.kalendar.foundation.locale.KalendarLocale
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
@@ -63,6 +65,7 @@ internal fun KalendarSolaris(
     onDaySelectionAction: OnDaySelectionAction = OnDaySelectionAction.Single { _, _ -> },
     kalendarKonfig: KalendarKonfig = KalendarKonfig(),
     startDayOfWeek: DayOfWeek = DayOfWeek.SUNDAY,
+    dateRange: KalendarDateRange = KalendarDateRange(),
 ) {
     KalendarSolarisContent(
         selectedDate = selectedDate,
@@ -75,6 +78,8 @@ internal fun KalendarSolaris(
         dayKonfig = kalendarKonfig.kalendarDayKonfig,
         kalendarDayLabelKonfig = kalendarKonfig.kalendarDayLabelKonfig,
         events = events,
+        dateRange = dateRange,
+        kalendarLocale = kalendarKonfig.kalendarLocale,
     )
 }
 
@@ -90,6 +95,8 @@ private fun KalendarSolarisContent(
     events: KalendarEvents,
     kalendarDayLabelKonfig: KalendarDayLabelKonfig,
     modifier: Modifier = Modifier,
+    dateRange: KalendarDateRange = KalendarDateRange(),
+    kalendarLocale: KalendarLocale = KalendarLocale.default(),
 ) {
     var currentMonth by remember {
         mutableStateOf(
@@ -127,6 +134,7 @@ private fun KalendarSolarisContent(
             year = currentMonth.year,
             showCalendarIcon = true,
             arrowShown = arrowShown,
+            kalendarLocale = kalendarLocale,
             calendarIconEnabled = calendarIconEnabled,
             onNavigateToday = {
                 if (calendarIconEnabled) {
@@ -146,6 +154,7 @@ private fun KalendarSolarisContent(
                 showDayLabel = showDayLabel,
                 dayOfWeek = { daysOfWeek },
                 kalendarDayLabelKonfig = kalendarDayLabelKonfig,
+                kalendarLocale = kalendarLocale,
                 dates = { displayDates },
             ) { date ->
                 if (date.month == currentMonth.month) {
@@ -183,6 +192,7 @@ private fun KalendarSolarisContent(
                             )
                         },
                         dayKonfig = dayKonfig,
+                        dateRange = dateRange,
                         events = events,
                         selectedDate = clickedNewDate,
                     )

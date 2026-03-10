@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import com.himanshoe.kalendar.foundation.KalendarScaffold
+import com.himanshoe.kalendar.foundation.action.KalendarDateRange
 import com.himanshoe.kalendar.foundation.action.KalendarSelectedDayRange
 import com.himanshoe.kalendar.foundation.action.OnDaySelectionAction
 import com.himanshoe.kalendar.foundation.action.onDayClick
@@ -45,6 +46,7 @@ import com.himanshoe.kalendar.foundation.component.config.KalendarHeaderKonfig
 import com.himanshoe.kalendar.foundation.component.config.KalendarKonfig
 import com.himanshoe.kalendar.foundation.event.KalendarEvents
 import com.himanshoe.kalendar.foundation.event.KalenderEvent
+import com.himanshoe.kalendar.foundation.locale.KalendarLocale
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
@@ -64,6 +66,7 @@ internal fun KalendarAerial(
     kalendarKonfig: KalendarKonfig = KalendarKonfig(),
     restrictToCurrentWeek: Boolean = false,
     startDayOfWeek: DayOfWeek = DayOfWeek.SUNDAY,
+    dateRange: KalendarDateRange = KalendarDateRange(),
 ) {
     KalendarAerialContent(
         selectedDate = selectedDate,
@@ -76,7 +79,9 @@ internal fun KalendarAerial(
         restrictToCurrentWeek = restrictToCurrentWeek,
         events = events,
         backgroundColor = kalendarKonfig.backgroundColor,
-        startDayOfWeek = startDayOfWeek
+        startDayOfWeek = startDayOfWeek,
+        dateRange = dateRange,
+        kalendarLocale = kalendarKonfig.kalendarLocale,
     )
 }
 
@@ -92,7 +97,9 @@ private fun KalendarAerialContent(
     restrictToCurrentWeek: Boolean,
     events: KalendarEvents,
     backgroundColor: KalendarColor,
-    startDayOfWeek: DayOfWeek
+    startDayOfWeek: DayOfWeek,
+    dateRange: KalendarDateRange = KalendarDateRange(),
+    kalendarLocale: KalendarLocale = KalendarLocale.default(),
 ) {
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
 
@@ -113,7 +120,7 @@ private fun KalendarAerialContent(
         getWeekDates(
             currentDay = currentDay,
             startDayOfWeek = startDayOfWeek
-        ).buildHeaderText()
+        ).buildHeaderText(kalendarLocale)
     }
 
     Column(
@@ -156,6 +163,7 @@ private fun KalendarAerialContent(
                 showDayLabel = showDayLabel,
                 dayOfWeek = { daysOfWeek },
                 kalendarDayLabelKonfig = kalendarDayLabelKonfig,
+                kalendarLocale = kalendarLocale,
                 dates = { displayDates },
             ) { date ->
                 KalendarDay(
@@ -192,6 +200,7 @@ private fun KalendarAerialContent(
                         )
                     },
                     dayKonfig = dayKonfig,
+                    dateRange = dateRange,
                     events = events,
                     selectedDate = clickedNewDate,
                 )

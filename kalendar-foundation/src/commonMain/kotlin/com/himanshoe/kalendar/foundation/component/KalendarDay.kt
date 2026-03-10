@@ -31,14 +31,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEachIndexed
+import com.himanshoe.kalendar.foundation.action.KalendarDateRange
 import com.himanshoe.kalendar.foundation.action.KalendarSelectedDayRange
 import com.himanshoe.kalendar.foundation.component.config.KalendarDayKonfig
 import com.himanshoe.kalendar.foundation.event.KalendarEvents
@@ -59,6 +67,7 @@ fun KalendarDay(
     selectedDate: LocalDate = date,
     events: KalendarEvents = KalendarEvents(),
     dayKonfig: KalendarDayKonfig = KalendarDayKonfig.default(),
+    dateRange: KalendarDateRange = KalendarDateRange(),
     onDayClick: (LocalDate, List<KalenderEvent>) -> Unit = { _, _ -> },
 ) {
     KalendarDayContent(
@@ -67,6 +76,7 @@ fun KalendarDay(
         events = events,
         selectedRange = selectedRange,
         dayKonfig = dayKonfig,
+        dateRange = dateRange,
         modifier = modifier,
         selectedDates = selectedDates,
         onDayClick = onDayClick,
@@ -81,6 +91,7 @@ private fun KalendarDayContent(
     selectedRange: KalendarSelectedDayRange? = null,
     selectedDate: LocalDate = date,
     dayKonfig: KalendarDayKonfig = KalendarDayKonfig.default(),
+    dateRange: KalendarDateRange = KalendarDateRange(),
     events: KalendarEvents = KalendarEvents(),
     onDayClick: (LocalDate, List<KalenderEvent>) -> Unit = { _, _ -> }
 ) {
@@ -88,19 +99,39 @@ private fun KalendarDayContent(
         Clock.System.todayIn(TimeZone.currentSystemDefault())
     }
     val currentDay = today == date
-    val selected = date == selectedDate || selectedDates.contains(date)
-    val brush = remember(selected) {
-        if (selected) {
-            Brush.linearGradient(dayKonfig.selectedTextColor.value)
-        } else {
-            dayKonfig.textStyle.brush
+    val isEnabled = remember(date, dateRange) { dateRange.isDateEnabled(date) }
+    val selected = isEnabled && (date == selectedDate || selectedDates.contains(date))
+    val brush = remember(selected, isEnabled) {
+        when {
+            !isEnabled -> Brush.linearGradient(dayKonfig.disabledTextColor.value)
+            selected -> Brush.linearGradient(dayKonfig.selectedTextColor.value)
+            else -> dayKonfig.textStyle.brush
         }
     }
     val fontWeight = remember(selected) { if (selected) FontWeight.Bold else FontWeight.Normal }
     val currentDayEvents = remember(events) { events.eventList.fastFilter { it.date == date } }
 
+    val dayDescription = remember(date, selected, currentDay, isEnabled, currentDayEvents.size) {
+        buildString {
+            append("${date.dayOfMonth}")
+            if (currentDay) append(", today")
+            if (selected) append(", selected")
+            if (!isEnabled) append(", disabled")
+            if (currentDayEvents.isNotEmpty()) {
+                append(", ${currentDayEvents.size} event${if (currentDayEvents.size > 1) "s" else ""}")
+            }
+        }
+    }
+
     Column(
         modifier = modifier
+            .semantics {
+                contentDescription = dayDescription
+                role = Role.Button
+                this.selected = selected
+                if (!isEnabled) disabled()
+            }
+            .alpha(if (isEnabled) 1f else 0.5f)
             .border(
                 border = getBorderStroke(
                     currentDay = currentDay,
@@ -117,9 +148,13 @@ private fun KalendarDayContent(
                 selectedRange = selectedRange,
                 colors = dayKonfig.selectedBackgroundColor.value
             )
-            .clickable {
-                onDayClick(date, currentDayEvents)
-            }
+            .then(
+                if (isEnabled) {
+                    Modifier.clickable { onDayClick(date, currentDayEvents) }
+                } else {
+                    Modifier
+                }
+            )
             .circleLayout()
             .defaultMinSize(dayKonfig.size),
         verticalArrangement = Arrangement.Center,
@@ -153,12 +188,13 @@ private fun EventIndicators(
     val itemCount = if (events.count() > 3) 3 else events.size
 
     Row(modifier = modifier) {
-        events.take(itemCount).fastForEachIndexed { index, _ ->
+        events.take(itemCount).fastForEachIndexed { index, event ->
             KalendarIndicator(
                 modifier = Modifier,
                 index = index,
                 size = dayKonfig.size,
-                color = dayKonfig.indicatorColor
+                color = dayKonfig.indicatorColor,
+                eventColor = event.eventColor,
             )
         }
     }

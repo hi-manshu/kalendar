@@ -45,11 +45,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.toLowerCase
 import androidx.compose.ui.unit.dp
 import com.himanshoe.kalendar.foundation.component.config.KalendarHeaderKonfig
+import com.himanshoe.kalendar.foundation.locale.KalendarLocale
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
 
@@ -63,12 +66,15 @@ fun KalendarHeader(
     calendarIconEnabled: Boolean = false,
     arrowShown: Boolean = true,
     kalendarHeaderKonfig: KalendarHeaderKonfig = KalendarHeaderKonfig.default(),
+    kalendarLocale: KalendarLocale = KalendarLocale.default(),
     onPreviousClick: () -> Unit = {},
     onNextClick: () -> Unit = {},
     onNavigateToday: () -> Unit = {},
 ) {
     val titleText =
-        remember(month, year, Locale.current) { getTitleText(month, year, Locale.current) }
+        remember(month, year, kalendarLocale) {
+            getTitleText(month, year, Locale.current, kalendarLocale)
+        }
 
     KalendarHeaderContent(
         arrowShown = arrowShown,
@@ -165,7 +171,8 @@ private fun KalendarHeaderContent(
             Text(
                 modifier = Modifier
                     .wrapContentSize()
-                    .align(Alignment.CenterVertically),
+                    .align(Alignment.CenterVertically)
+                    .semantics { heading() },
                 text = month,
                 style = kalendarHeaderKonfig.textStyle,
             )
@@ -226,26 +233,46 @@ private fun addAnimation(duration: Int = 200, isNext: Boolean): ContentTransform
         )
 }
 
-private fun getTitleText(month: Month, year: Int, locale: Locale): String {
-    val monthDisplayName = month.name.toLowerCase(locale)
-        .replaceFirstChar {
-            if (it.isLowerCase()) it.toString().capitalize(locale) else it.toString()
-        }
+private fun getTitleText(
+    month: Month,
+    year: Int,
+    locale: Locale,
+    kalendarLocale: KalendarLocale = KalendarLocale.default(),
+): String {
+    val monthDisplayName = kalendarLocale.monthNames.getOrElse(month.ordinal) {
+        month.name.toLowerCase(locale)
+            .replaceFirstChar {
+                if (it.isLowerCase()) it.toString().capitalize(locale) else it.toString()
+            }
+    }
     val shortYear = year.toString().takeLast(2)
     return "$monthDisplayName '$shortYear"
 }
 
-fun List<LocalDate>.buildHeaderText(): String {
+fun List<LocalDate>.buildHeaderText(
+    kalendarLocale: KalendarLocale = KalendarLocale.default(),
+): String {
     val months = this.map { it.month }.distinct()
     return if (months.size > 1) {
-        "${months.first().name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }} '${
-            this.first().year.toString().takeLast(2)
-        }/${months.last().name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }} '${
+        val firstName = kalendarLocale.monthNames.getOrElse(months.first().ordinal) {
+            months.first().name.replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase() else it.toString()
+            }
+        }
+        val lastName = kalendarLocale.monthNames.getOrElse(months.last().ordinal) {
+            months.last().name.replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase() else it.toString()
+            }
+        }
+        "$firstName '${this.first().year.toString().takeLast(2)}/$lastName '${
             this.last().year.toString().takeLast(2)
         }"
     } else {
-        "${months.first().name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }} '${
-            this.first().year.toString().takeLast(2)
-        }"
+        val monthName = kalendarLocale.monthNames.getOrElse(months.first().ordinal) {
+            months.first().name.replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase() else it.toString()
+            }
+        }
+        "$monthName '${this.first().year.toString().takeLast(2)}"
     }
 }

@@ -35,8 +35,10 @@ fun KalendarIndicator(
     size: Dp,
     color: KalendarColor,
     modifier: Modifier = Modifier,
+    eventColor: KalendarColor? = null,
 ) {
-    val brush = Brush.linearGradient(color.value.map { it.copy(alpha = (index + 1) * 0.3f) })
+    val effectiveColor = eventColor ?: color
+    val brush = Brush.linearGradient(effectiveColor.value.map { it.copy(alpha = (index + 1) * 0.3f) })
     Box(
         modifier = modifier
             .padding(horizontal = 1.dp)

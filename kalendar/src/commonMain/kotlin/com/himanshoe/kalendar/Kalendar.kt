@@ -18,6 +18,7 @@ package com.himanshoe.kalendar
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.himanshoe.kalendar.foundation.action.KalendarDateRange
 import com.himanshoe.kalendar.foundation.action.OnDaySelectionAction
 import com.himanshoe.kalendar.foundation.component.config.KalendarKonfig
 import com.himanshoe.kalendar.foundation.event.KalendarEvents
@@ -39,6 +40,7 @@ fun Kalendar(
     kalendarKonfig: KalendarKonfig = KalendarKonfig(),
     restrictToCurrentWeekOrMonth: Boolean = false,
     startDayOfWeek: DayOfWeek = DayOfWeek.SUNDAY,
+    dateRange: KalendarDateRange = KalendarDateRange(),
 ) {
     when (kalendarType) {
         KalendarType.Oceanic -> {
@@ -52,6 +54,7 @@ fun Kalendar(
                 events = events,
                 startDayOfWeek = startDayOfWeek,
                 restrictToCurrentMonth = restrictToCurrentWeekOrMonth,
+                dateRange = dateRange,
             )
         }
 
@@ -66,6 +69,7 @@ fun Kalendar(
                 onDaySelectionAction = onDaySelectionAction,
                 kalendarKonfig = kalendarKonfig,
                 restrictToCurrentWeek = restrictToCurrentWeekOrMonth,
+                dateRange = dateRange,
             )
         }
 
@@ -78,6 +82,7 @@ fun Kalendar(
                 kalendarKonfig = kalendarKonfig,
                 events = events,
                 startDayOfWeek = startDayOfWeek,
+                dateRange = dateRange,
             )
         }
 
@@ -90,6 +95,7 @@ fun Kalendar(
                 showDayLabel = showDayLabel,
                 onDaySelectionAction = onDaySelectionAction,
                 kalendarKonfig = kalendarKonfig,
+                dateRange = dateRange,
             )
         }
     }

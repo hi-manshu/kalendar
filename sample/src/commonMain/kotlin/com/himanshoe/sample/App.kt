@@ -16,7 +16,6 @@
 
 package com.himanshoe.sample
 
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -29,25 +28,89 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.himanshoe.kalendar.Kalendar
 import com.himanshoe.kalendar.KalendarType
+import com.himanshoe.kalendar.foundation.action.KalendarDateRange
 import com.himanshoe.kalendar.foundation.action.OnDaySelectionAction
+import com.himanshoe.kalendar.foundation.color.KalendarColor
+import com.himanshoe.kalendar.foundation.component.config.KalendarKonfig
+import com.himanshoe.kalendar.foundation.event.BasicKalendarEvent
 import com.himanshoe.kalendar.foundation.event.KalendarEvents
-import com.himanshoe.kalendar.foundation.event.KalenderEvent
+import com.himanshoe.kalendar.foundation.locale.KalendarLocale
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 
 @Composable
 fun App() {
+    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+
+    val sampleEvents = KalendarEvents(
+        eventList = listOf(
+            BasicKalendarEvent(
+                date = today,
+                eventName = "Team Meeting",
+                eventDescription = "Sprint planning",
+                eventColor = KalendarColor.Solid(Color(0xFF4CAF50)),
+            ),
+            BasicKalendarEvent(
+                date = today,
+                eventName = "Lunch",
+                eventDescription = "Team lunch",
+                eventColor = KalendarColor.Solid(Color(0xFF2196F3)),
+            ),
+            BasicKalendarEvent(
+                date = today.plus(2, DateTimeUnit.DAY),
+                eventName = "Release",
+                eventDescription = "v2.0 release",
+                eventColor = KalendarColor.Solid(Color(0xFFFF5722)),
+            ),
+        )
+    )
+
+    val dateRange = KalendarDateRange(
+        minDate = today,
+        maxDate = today.plus(30, DateTimeUnit.DAY),
+        disabledDates = setOf(
+            today.plus(5, DateTimeUnit.DAY),
+            today.plus(10, DateTimeUnit.DAY),
+        ),
+    )
+
+    val spanishLocale = KalendarLocale(
+        dayNames = listOf("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"),
+        shortDayNames = listOf("Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"),
+        monthNames = listOf(
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ),
+    )
+
     Column(modifier = Modifier.wrapContentSize().background(Color.LightGray)) {
         Kalendar(
-            selectedDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
+            selectedDate = today,
             modifier = Modifier.fillMaxWidth(),
-            events = KalendarEvents(),
+            events = sampleEvents,
             startDayOfWeek = DayOfWeek.SUNDAY,
             kalendarType = KalendarType.Aerial,
+            dateRange = dateRange,
+            kalendarKonfig = KalendarKonfig(kalendarLocale = spanishLocale),
             onDaySelectionAction = OnDaySelectionAction.Multiple { date, events ->
+                println("Selected Date: $date with events: $events")
+            },
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Kalendar(
+            selectedDate = today,
+            modifier = Modifier.fillMaxWidth(),
+            events = sampleEvents,
+            startDayOfWeek = DayOfWeek.MONDAY,
+            kalendarType = KalendarType.Oceanic,
+            dateRange = dateRange,
+            kalendarKonfig = KalendarKonfig(kalendarLocale = spanishLocale),
+            onDaySelectionAction = OnDaySelectionAction.Single { date, events ->
                 println("Selected Date: $date with events: $events")
             },
         )

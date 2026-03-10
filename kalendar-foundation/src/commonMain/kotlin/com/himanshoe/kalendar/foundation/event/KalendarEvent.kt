@@ -16,6 +16,7 @@
 
 package com.himanshoe.kalendar.foundation.event
 
+import com.himanshoe.kalendar.foundation.color.KalendarColor
 import kotlinx.datetime.LocalDate
 
 /**
@@ -36,6 +37,12 @@ interface KalenderEvent {
      * The description of the event.
      */
     val eventDescription: String?
+
+    /**
+     * Optional color for this event's indicator. When null, falls back to config-level indicatorColor.
+     */
+    val eventColor: KalendarColor?
+        get() = null
 }
 
 /**
@@ -44,11 +51,13 @@ interface KalenderEvent {
  * @property date The date of the event.
  * @property eventName The name of the event.
  * @property eventDescription The description of the event.
+ * @property eventColor Optional per-event indicator color.
  */
 data class BasicKalendarEvent(
     override val date: LocalDate,
     override val eventName: String,
-    override val eventDescription: String?
+    override val eventDescription: String?,
+    override val eventColor: KalendarColor? = null,
 ) : KalenderEvent
 
 /**
