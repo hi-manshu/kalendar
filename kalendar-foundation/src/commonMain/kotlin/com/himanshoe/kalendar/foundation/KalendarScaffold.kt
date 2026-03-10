@@ -29,6 +29,20 @@ import com.himanshoe.kalendar.foundation.locale.KalendarLocale
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 
+/**
+ * A reusable grid scaffold for rendering calendar days in a 7-column layout.
+ *
+ * Provides the structural layout shared by all calendar types: an optional
+ * row of day-of-week labels followed by a [LazyVerticalGrid] of date cells.
+ *
+ * @param showDayLabel Whether to display the day-of-week header row (e.g., Mo, Tu, We…).
+ * @param dayOfWeek Provider returning the ordered list of [DayOfWeek] for the header.
+ * @param kalendarDayLabelKonfig Styling configuration for the day label text.
+ * @param modifier Modifier applied to the grid.
+ * @param kalendarLocale Locale for localised day name strings.
+ * @param dates Provider returning the list of [LocalDate] values to render.
+ * @param content Composable lambda invoked for each date cell.
+ */
 @Composable
 fun KalendarScaffold(
     showDayLabel: Boolean,

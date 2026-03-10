@@ -18,7 +18,15 @@ package com.himanshoe.kalendar.foundation.action
 
 import kotlinx.datetime.LocalDate
 
+/**
+ * Represents a contiguous range of selected dates in the calendar.
+ *
+ * Used by [OnDaySelectionAction.Range] to track the user's range selection.
+ *
+ * @property start The first date in the range (inclusive).
+ * @property end The last date in the range (inclusive). Always >= [start].
+ */
 data class KalendarSelectedDayRange(
     val start: LocalDate,
-    val end: LocalDate
+    val end: LocalDate,
 )

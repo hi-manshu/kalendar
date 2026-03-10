@@ -56,6 +56,22 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 
+/**
+ * A week-view calendar with horizontal swipe (pager) navigation between weeks.
+ *
+ * Uses a [HorizontalPager] to allow swiping left and right through weeks.
+ * Includes a "today" icon button in the header to jump back to the current week.
+ *
+ * @param selectedDate The date to highlight as selected.
+ * @param modifier Modifier applied to the root layout.
+ * @param events Calendar events to display as indicators.
+ * @param showDayLabel Whether to display the day-of-week label row.
+ * @param onDaySelectionAction Controls how day selection works.
+ * @param kalendarKonfig Visual configuration for the calendar.
+ * @param restrictToCurrentWeek When true, prevents navigating before the current week.
+ * @param startDayOfWeek The first day of the week column.
+ * @param dateRange Date range constraints for enabled/disabled days.
+ */
 @Composable
 internal fun KalendarAerial(
     selectedDate: LocalDate,

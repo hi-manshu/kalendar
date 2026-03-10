@@ -19,6 +19,22 @@ package com.himanshoe.kalendar.foundation.action
 import com.himanshoe.kalendar.foundation.event.KalenderEvent
 import kotlinx.datetime.LocalDate
 
+/**
+ * Handles a day click by dispatching to the appropriate [OnDaySelectionAction] handler.
+ *
+ * This extension function centralises the selection logic for single, multiple, and range
+ * day selection modes, updating the relevant state callbacks accordingly.
+ *
+ * @param events The events associated with this date.
+ * @param rangeStartDate The current range start date (for range selection mode).
+ * @param rangeEndDate The current range end date (for range selection mode).
+ * @param onDaySelectionAction The active selection mode and its callback.
+ * @param onClickedNewDate Called to update the single selected date.
+ * @param onMultipleClickedNewDate Called to toggle a date in the multi-selection list.
+ * @param onClickedRangeStartDate Called to update the range start date.
+ * @param onClickedRangeEndDate Called to update the range end date.
+ * @param onUpdateSelectedRange Called to update the full selected range.
+ */
 fun LocalDate.onDayClick(
     events: List<KalenderEvent>,
     rangeStartDate: LocalDate?,

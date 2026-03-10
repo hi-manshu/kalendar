@@ -27,6 +27,10 @@ import kotlinx.datetime.LocalDate
 private const val FULL_ALPHA = 1f
 private const val TOWNED_DOWN_ALPHA = 0.5F
 
+/**
+ * Forces the layout to be circular by setting both dimensions to the maximum of width and height,
+ * then centring the child within the resulting square.
+ */
 fun Modifier.circleLayout() =
     layout { measurable, constraints ->
         // Measure the composable
@@ -48,6 +52,18 @@ fun Modifier.circleLayout() =
         }
     }
 
+/**
+ * Applies the appropriate background colour to a day cell based on its selection state.
+ *
+ * The background is determined by whether the date is selected, part of a selected range,
+ * or in a multi-selection list. Unselected dates are transparent.
+ *
+ * @param date The date this modifier is applied to.
+ * @param selected Whether this date is the primary single-selected date.
+ * @param colors The gradient colours for the selected background.
+ * @param selectedRange The currently selected date range, if any.
+ * @param selectedDates The list of dates selected in multi-select mode.
+ */
 fun Modifier.dayBackgroundColor(
     date: LocalDate,
     selected: Boolean,

@@ -58,6 +58,22 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 
+/**
+ * A single day cell in the calendar grid.
+ *
+ * Renders the day number with event indicators, selection highlighting,
+ * today border, and disabled state. Handles click interactions via [onDayClick].
+ *
+ * @param date The date this cell represents.
+ * @param modifier Modifier applied to the day cell.
+ * @param selectedDates List of currently selected dates (for multi-select mode).
+ * @param selectedRange The currently selected date range (for range-select mode).
+ * @param selectedDate The single selected date (for single-select mode).
+ * @param events Calendar events; matching events show indicator dots below the day number.
+ * @param dayKonfig Visual configuration for the day cell (size, colours, text style).
+ * @param dateRange Date range constraints controlling which days are enabled.
+ * @param onDayClick Called when the day cell is clicked, providing the date and its events.
+ */
 @Composable
 fun KalendarDay(
     date: LocalDate,

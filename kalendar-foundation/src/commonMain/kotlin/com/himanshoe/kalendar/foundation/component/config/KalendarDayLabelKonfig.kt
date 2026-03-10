@@ -23,6 +23,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 
+/**
+ * Visual configuration for the day-of-week label row displayed above the calendar grid.
+ *
+ * @property textStyle Text style for the day labels (e.g., "Mo", "Tu").
+ * @property textCharCount Maximum number of characters to display for each day name.
+ * @property centerAligned Whether to centre-align the labels within their columns.
+ */
 data class KalendarDayLabelKonfig(
     val textStyle: TextStyle,
     val textCharCount: Int,

@@ -25,6 +25,17 @@ import androidx.compose.ui.unit.sp
 import com.himanshoe.kalendar.foundation.color.KalendarColor
 import com.himanshoe.kalendar.foundation.color.asSolidChartColor
 
+/**
+ * Visual configuration for individual day cells in the calendar grid.
+ *
+ * @property size The minimum size (width and height) of each day cell.
+ * @property selectedTextColor Text colour applied to the selected day's number.
+ * @property borderColor Border colour for the "today" indicator ring.
+ * @property indicatorColor Default colour for event indicator dots.
+ * @property textStyle Base text style for day numbers.
+ * @property selectedBackgroundColor Background colour applied to selected day cells.
+ * @property disabledTextColor Text colour for days outside the enabled date range.
+ */
 data class KalendarDayKonfig(
     val size: Dp,
     val selectedTextColor: KalendarColor,

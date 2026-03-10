@@ -31,26 +31,49 @@ package com.himanshoe.kalendar
  */
 
 /**
- * Represents the type of a calendar.
+ * Represents the visual layout and interaction style of the Kalendar composable.
+ *
+ * Each type renders dates in a different format:
+ * - [Firey] — A single-week row with arrow-based navigation.
+ * - [Oceanic] — A full month grid with arrow-based navigation.
+ * - [Aerial] — A single-week row with horizontal swipe (pager) navigation.
+ * - [Solaris] — A full month grid with horizontal swipe (pager) navigation.
+ * - [Cosmic] — An annual year view showing 12 mini-months with animated drill-down
+ *   into month and week views.
  */
 sealed interface KalendarType {
     /**
-     * Firey calendar type.
+     * A week view with left/right arrow buttons for navigating between weeks.
      */
     data object Firey : KalendarType
 
     /**
-     * Oceanic calendar type.
+     * A month view with left/right arrow buttons for navigating between months.
      */
     data object Oceanic : KalendarType
 
     /**
-     * Aerial calendar type.
+     * A week view with horizontal swipe (pager) navigation between weeks.
+     * Includes a "today" icon button to jump back to the current week.
      */
     data object Aerial : KalendarType
 
     /**
-     * Solaris calendar type.
+     * A month view with horizontal swipe (pager) navigation between months.
+     * Includes a "today" icon button to jump back to the current month.
      */
     data object Solaris : KalendarType
+
+    /**
+     * An annual year view displaying all 12 months in a compact 4×3 grid.
+     *
+     * Supports configurable animated drill-down navigation:
+     * tapping a mini-month can open a full month view, and tapping a week
+     * row in the month view can open a week view. All transitions use
+     * smooth slide + fade animations.
+     *
+     * Use [com.himanshoe.kalendar.cosmic.KalendarCosmic] directly for full
+     * configuration via [com.himanshoe.kalendar.cosmic.KalendarCosmicKonfig].
+     */
+    data object Cosmic : KalendarType
 }

@@ -28,6 +28,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.himanshoe.kalendar.Kalendar
 import com.himanshoe.kalendar.KalendarType
+import com.himanshoe.kalendar.cosmic.DrillDownMode
+import com.himanshoe.kalendar.cosmic.KalendarCosmic
+import com.himanshoe.kalendar.cosmic.KalendarCosmicKonfig
 import com.himanshoe.kalendar.foundation.action.KalendarDateRange
 import com.himanshoe.kalendar.foundation.action.OnDaySelectionAction
 import com.himanshoe.kalendar.foundation.color.KalendarColor
@@ -89,6 +92,21 @@ fun App() {
     )
 
     Column(modifier = Modifier.wrapContentSize().background(Color.LightGray)) {
+        // Cosmic — Annual year view with drill-down into month and week
+        KalendarCosmic(
+            modifier = Modifier.fillMaxWidth(),
+            selectedDate = today,
+            events = sampleEvents,
+            cosmicKonfig = KalendarCosmicKonfig(
+                kalendarKonfig = KalendarKonfig(kalendarLocale = spanishLocale),
+                onMonthClick = DrillDownMode.MonthView,
+                onWeekClick = DrillDownMode.WeekView,
+            ),
+            onDaySelectionAction = OnDaySelectionAction.Single { date, events ->
+                println("Cosmic Selected: $date with events: $events")
+            },
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         Kalendar(
             selectedDate = today,
             modifier = Modifier.fillMaxWidth(),

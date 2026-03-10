@@ -56,6 +56,23 @@ import com.himanshoe.kalendar.foundation.locale.KalendarLocale
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
 
+/**
+ * Calendar header displaying a localised "Month 'YY" title with optional navigation arrows
+ * and a "today" icon button.
+ *
+ * @param month The month to display in the title.
+ * @param year The year to display in the title.
+ * @param modifier Modifier applied to the header row.
+ * @param canNavigateBack Whether the back arrow is enabled.
+ * @param showCalendarIcon Whether to show the "today" navigation icon.
+ * @param calendarIconEnabled Whether the "today" icon is enabled.
+ * @param arrowShown Whether to show prev/next arrow buttons.
+ * @param kalendarHeaderKonfig Styling configuration for the header.
+ * @param kalendarLocale Locale for localised month names.
+ * @param onPreviousClick Called when the previous arrow is clicked.
+ * @param onNextClick Called when the next arrow is clicked.
+ * @param onNavigateToday Called when the "today" icon is clicked.
+ */
 @Composable
 fun KalendarHeader(
     month: Month,
@@ -91,6 +108,23 @@ fun KalendarHeader(
     )
 }
 
+/**
+ * Calendar header displaying a custom title string with optional navigation arrows
+ * and a "today" icon button.
+ *
+ * Use this overload when the title is pre-formatted (e.g., a week range or year string).
+ *
+ * @param title The pre-formatted title text to display.
+ * @param modifier Modifier applied to the header row.
+ * @param showCalendarIcon Whether to show the "today" navigation icon.
+ * @param calendarIconEnabled Whether the "today" icon is enabled.
+ * @param canNavigateBack Whether the back arrow is enabled.
+ * @param arrowShown Whether to show prev/next arrow buttons.
+ * @param kalendarHeaderKonfig Styling configuration for the header.
+ * @param onPreviousClick Called when the previous arrow is clicked.
+ * @param onNextClick Called when the next arrow is clicked.
+ * @param onNavigateToday Called when the "today" icon is clicked.
+ */
 @Composable
 fun KalendarHeader(
     title: String,

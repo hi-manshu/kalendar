@@ -51,6 +51,24 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 
+/**
+ * A month-view calendar with arrow-based navigation between months.
+ *
+ * Displays a full month grid where each cell is a day. Users can navigate
+ * to the previous or next month using header arrow buttons. Supports single,
+ * multiple, and range day selection modes.
+ *
+ * @param selectedDate The date to highlight as selected.
+ * @param arrowShown Whether to show navigation arrows in the header.
+ * @param showDayLabel Whether to display the day-of-week label row.
+ * @param kalendarKonfig Visual configuration for the calendar.
+ * @param events Calendar events to display as indicators.
+ * @param modifier Modifier applied to the root layout.
+ * @param restrictToCurrentMonth When true, prevents navigating before the current month.
+ * @param startDayOfWeek The first day of the week column.
+ * @param onDaySelectionAction Controls how day selection works.
+ * @param dateRange Date range constraints for enabled/disabled days.
+ */
 @Composable
 internal fun KalendarOceanic(
     selectedDate: LocalDate,
@@ -189,6 +207,14 @@ private fun KalendarOceanicContent(
     }
 }
 
+/**
+ * Computes all dates to display for a given month grid, including leading
+ * days from the previous month to align with the [startDayOfWeek].
+ *
+ * @param currentMonth A [LocalDate] representing the first day of the month.
+ * @param startDayOfWeek The day of the week to use as the first column.
+ * @return A list of [LocalDate] covering the full grid.
+ */
 internal fun getMonthDates(
     currentMonth: LocalDate,
     startDayOfWeek: DayOfWeek

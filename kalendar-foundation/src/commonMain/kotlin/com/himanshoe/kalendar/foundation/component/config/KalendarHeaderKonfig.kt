@@ -23,6 +23,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 
+/**
+ * Visual configuration for the calendar header row.
+ *
+ * @property textStyle Text style applied to the header title (month/year or custom text).
+ * @property centerAligned When true, the title is centred between the navigation arrows.
+ *   When false, the title is left-aligned and arrows are grouped on the right.
+ */
 data class KalendarHeaderKonfig(
     val textStyle: TextStyle,
     val centerAligned: Boolean

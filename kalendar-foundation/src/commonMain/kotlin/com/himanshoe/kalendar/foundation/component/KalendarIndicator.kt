@@ -29,6 +29,18 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.himanshoe.kalendar.foundation.color.KalendarColor
 
+/**
+ * A small circular dot indicator rendered below a day number to represent an event.
+ *
+ * Multiple indicators can appear side by side for days with several events.
+ * The opacity varies by [index] to visually distinguish stacked indicators.
+ *
+ * @param index The zero-based index of this indicator among siblings.
+ * @param size The base size of the parent day cell, used to derive the indicator size.
+ * @param color The default indicator colour from configuration.
+ * @param modifier Modifier applied to the indicator dot.
+ * @param eventColor An optional per-event colour that overrides [color].
+ */
 @Composable
 fun KalendarIndicator(
     index: Int,

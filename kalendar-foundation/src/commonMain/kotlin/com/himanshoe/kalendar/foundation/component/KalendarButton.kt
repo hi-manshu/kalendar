@@ -29,6 +29,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
+/**
+ * A circular icon button used in calendar headers for navigation (arrows, today icon).
+ *
+ * @param imageVector The icon to display inside the button.
+ * @param enabled Whether the button is clickable. When disabled, the icon is greyed out.
+ * @param modifier Modifier applied to the button.
+ * @param contentDescription Accessibility description for the icon.
+ * @param onClick Called when the button is clicked.
+ */
 @Composable
 internal fun KalendarIconButton(
     imageVector: ImageVector,

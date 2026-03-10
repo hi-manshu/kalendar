@@ -76,6 +76,7 @@ kotlin {
             implementation(compose.foundation)
             implementation(project(":kalendar"))
             implementation(project(":kalendar-foundation"))
+            implementation(project(":kalendar-cosmic"))
 //            implementation("com.himanshoe:kalendar:2.0.0-RC1")
 //            implementation("com.himanshoe:kalendar-foundation:1.0.0")
             implementation(compose.material)

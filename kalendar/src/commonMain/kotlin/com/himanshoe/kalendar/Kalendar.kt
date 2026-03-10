@@ -18,6 +18,7 @@ package com.himanshoe.kalendar
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.himanshoe.kalendar.cosmic.KalendarCosmic
 import com.himanshoe.kalendar.foundation.action.KalendarDateRange
 import com.himanshoe.kalendar.foundation.action.OnDaySelectionAction
 import com.himanshoe.kalendar.foundation.component.config.KalendarKonfig
@@ -28,6 +29,24 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 
+/**
+ * The main entry point for displaying a Kalendar calendar.
+ *
+ * Delegates to the appropriate calendar implementation based on the supplied [kalendarType].
+ * All calendar types share the same parameter set for consistent API usage.
+ *
+ * @param kalendarType The layout style to render. See [KalendarType] for options.
+ * @param modifier Modifier applied to the calendar root layout.
+ * @param selectedDate The date to highlight as selected. Defaults to today.
+ * @param events A collection of [KalendarEvents] to display as indicators on day cells.
+ * @param showDayLabel Whether to show the day-of-week label row (e.g., Mo, Tu, We…).
+ * @param arrowShown Whether to show navigation arrows (applicable to [KalendarType.Firey] and [KalendarType.Oceanic]).
+ * @param onDaySelectionAction Controls day selection behaviour: single, multiple, or range.
+ * @param kalendarKonfig Visual configuration for day cells, headers, labels, background, and locale.
+ * @param restrictToCurrentWeekOrMonth When true, prevents navigating before the current week/month.
+ * @param startDayOfWeek The first day of each week column. Defaults to [DayOfWeek.SUNDAY].
+ * @param dateRange Optional constraints on which dates are selectable.
+ */
 @Composable
 fun Kalendar(
     kalendarType: KalendarType,
@@ -95,6 +114,17 @@ fun Kalendar(
                 showDayLabel = showDayLabel,
                 onDaySelectionAction = onDaySelectionAction,
                 kalendarKonfig = kalendarKonfig,
+                dateRange = dateRange,
+            )
+        }
+
+        KalendarType.Cosmic -> {
+            KalendarCosmic(
+                modifier = modifier,
+                selectedDate = selectedDate,
+                events = events,
+                onDaySelectionAction = onDaySelectionAction,
+                startDayOfWeek = startDayOfWeek,
                 dateRange = dateRange,
             )
         }

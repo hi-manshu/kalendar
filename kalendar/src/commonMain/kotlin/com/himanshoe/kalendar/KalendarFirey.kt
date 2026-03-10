@@ -52,6 +52,23 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 
+/**
+ * A week-view calendar with arrow-based navigation between weeks.
+ *
+ * Displays a single week row where each cell is a day. Users can navigate
+ * to the previous or next week using header arrow buttons.
+ *
+ * @param selectedDate The date to highlight as selected.
+ * @param modifier Modifier applied to the root layout.
+ * @param events Calendar events to display as indicators.
+ * @param showDayLabel Whether to display the day-of-week label row.
+ * @param arrowShown Whether to show navigation arrows in the header.
+ * @param onDaySelectionAction Controls how day selection works.
+ * @param kalendarKonfig Visual configuration for the calendar.
+ * @param restrictToCurrentWeek When true, prevents navigating before the current week.
+ * @param startDayOfWeek The first day of the week column.
+ * @param dateRange Date range constraints for enabled/disabled days.
+ */
 @Composable
 internal fun KalendarFirey(
     selectedDate: LocalDate,
@@ -184,6 +201,14 @@ private fun KalendarFireyContent(
     }
 }
 
+/**
+ * Computes the seven dates of the week containing [currentDay],
+ * starting from the given [startDayOfWeek].
+ *
+ * @param currentDay Any date within the desired week.
+ * @param startDayOfWeek The day of the week to use as the first column.
+ * @return A list of seven [LocalDate] values for the week.
+ */
 internal fun getWeekDates(currentDay: LocalDate, startDayOfWeek: DayOfWeek): List<LocalDate> {
     val startOfWeek = currentDay.minus(
         (currentDay.dayOfWeek.ordinal - startDayOfWeek.ordinal + 7) % 7,
@@ -192,6 +217,12 @@ internal fun getWeekDates(currentDay: LocalDate, startDayOfWeek: DayOfWeek): Lis
     return (0..6).map { startOfWeek.plus(it, DateTimeUnit.DAY) }
 }
 
+/**
+ * Rotates this list of [DayOfWeek] so that the element at [distance] becomes the first element.
+ *
+ * @param distance The number of positions to rotate.
+ * @return A new list with the elements rotated.
+ */
 internal fun List<DayOfWeek>.rotate(distance: Int): List<DayOfWeek> {
     return this.drop(distance) + this.take(distance)
 }

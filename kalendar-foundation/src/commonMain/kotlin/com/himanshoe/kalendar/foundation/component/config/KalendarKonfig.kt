@@ -20,6 +20,18 @@ import androidx.compose.ui.graphics.Color
 import com.himanshoe.kalendar.foundation.color.KalendarColor
 import com.himanshoe.kalendar.foundation.locale.KalendarLocale
 
+/**
+ * Top-level configuration for the Kalendar composable.
+ *
+ * Aggregates all sub-configurations that control the visual appearance
+ * and locale of the calendar.
+ *
+ * @property kalendarDayKonfig Configuration for individual day cells (size, colours, text).
+ * @property kalendarHeaderKonfig Configuration for the calendar header (text style, alignment).
+ * @property kalendarDayLabelKonfig Configuration for the day-of-week label row.
+ * @property backgroundColor Background colour or gradient applied to the calendar container.
+ * @property kalendarLocale Locale providing localised day and month name strings.
+ */
 data class KalendarKonfig(
     val kalendarDayKonfig: KalendarDayKonfig = KalendarDayKonfig.default(),
     val kalendarHeaderKonfig: KalendarHeaderKonfig = KalendarHeaderKonfig.default(),
