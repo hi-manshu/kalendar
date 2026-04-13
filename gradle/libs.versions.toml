@@ -1,6 +1,6 @@
 [versions]
 agp = "8.9.0"
-androidx-core-ktx = "1.16.0"
+androidx-core-ktx = "1.18.0"
 detektCli = "1.23.8"
 detektFormatting = "1.23.8"
 kalendarFoundation = "1.0.0"
