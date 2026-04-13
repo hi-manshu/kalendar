@@ -1,129 +1,187 @@
-## Kalendar Type:
+# Kalendar – Configuration Reference
 
-- **Oceanic**: A majestic spell that conjures the MonthView..
-- **Firey**: A fiery enchantment that reveals the WeekView.
-- **Solaris**: A charm that lets you swipe through the calendar in MonthView, as if by magic.
-- **Aerial**: A spell that grants you the power to swipe through the calendar in WeekView, with the
-  flick of a wand.
-
-## KalendarEvent
-
-Represents an individual event tied to a specific date.
-
-```kotlin
-data class KalendarEvent(
-    val date: LocalDate,
-    val eventName: String,
-    val eventDescription: String? = null
-)
-```
-
-### Properties:
-
-- **date** (`LocalDate`): The date of the event.
-- **eventName** (`String`): The name of the event.
-- **eventDescription** (`String?`): An optional description of the event (default: `null`).
+All visual and behavioural options are consolidated in `KalendarConfig`. Pass it to the `config`
+parameter of `Kalendar()`.
 
 ---
 
-## KalendarEvents
-
-A collection of multiple calendar [events](#kalendarEvent).
+## KalendarConfig
 
 ```kotlin
-
-data class KalendarEvents(
-    val eventList: List<KalendarEvent> = emptyList()
-)
-```
-
-### Properties:
-
-- **eventList** (`List<KalendarEvent>`): A list of events (default: an empty list).
-
-## KalendarKonfig
-
-Configuration options for the calendar’s behavior and style
-
-```kotlin
-data class KalendarKonfig(
-    val kalendarDayKonfig: KalendarDayKonfig = KalendarDayKonfig.default(),
-    val kalendarHeaderKonfig: KalendarHeaderKonfig = KalendarHeaderKonfig.default(),
-    val kalendarDayLabelKonfig: KalendarDayLabelKonfig = KalendarDayLabelKonfig.default(),
+data class KalendarConfig(
+    val showDayLabel: Boolean = true,
+    val showArrows: Boolean = true,
+    val startDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
+    val firstVisibleDate: LocalDate? = null,
+    val minDate: LocalDate? = null,
+    val maxDate: LocalDate? = null,
+    val initialSelectedDates: List<LocalDate> = emptyList(),
+    val initialSelectedRange: KalendarSelectedDayRange? = null,
+    val disabledDates: (LocalDate) -> Boolean = { false },
+    val onVisibleRangeChange: ((start: LocalDate, end: LocalDate) -> Unit)? = null,
+    val dayConfig: KalendarDayConfig = KalendarDayConfig(),
+    val headerConfig: KalendarHeaderConfig = KalendarHeaderConfig.default(),
+    val dayLabelConfig: KalendarDayLabelConfig = KalendarDayLabelConfig.default(),
     val backgroundColor: KalendarColor = KalendarColor.Solid(Color.White),
 )
-
 ```
 
-### Properties:
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `showDayLabel` | `Boolean` | `true` | Show the Mon/Tue/… header row. |
+| `showArrows` | `Boolean` | `true` | Show previous/next arrow buttons (no effect on swipe variants). |
+| `startDayOfWeek` | `DayOfWeek` | `MONDAY` | First column of the week grid. |
+| `firstVisibleDate` | `LocalDate?` | `null` | Open the calendar on this date without pre-selecting it. |
+| `minDate` | `LocalDate?` | `null` | Oldest navigable date. |
+| `maxDate` | `LocalDate?` | `null` | Latest navigable date. |
+| `initialSelectedDates` | `List<LocalDate>` | `emptyList()` | Pre-selected dates for Multiple mode. |
+| `initialSelectedRange` | `KalendarSelectedDayRange?` | `null` | Pre-selected range for Range mode. |
+| `disabledDates` | `(LocalDate) -> Boolean` | `{ false }` | Predicate; disabled dates are dimmed and non-tappable. |
+| `onVisibleRangeChange` | `((LocalDate, LocalDate) -> Unit)?` | `null` | Fires on every navigation; use for lazy event loading. |
+| `dayConfig` | `KalendarDayConfig` | — | Visual config for day cells. |
+| `headerConfig` | `KalendarHeaderConfig` | — | Visual config for the month/week header. |
+| `dayLabelConfig` | `KalendarDayLabelConfig` | — | Visual config for day-of-week labels. |
+| `backgroundColor` | `KalendarColor` | `Solid(White)` | Background colour/gradient for the container. |
 
-- **kalendarDayKonfig** (`[KalendarDayKonfig](#kalendarDayKonfig)`): A config to update day style of
-  calendar.
-- **kalendarHeaderKonfig** (`[KalendarHeaderKonfig](#kalendarHeaderKonfig)`): A config to update day
-  style of calendar.
-- **kalendarDayLabelKonfig** (`[KalendarDayLabelKonfig](#kalendarDayLabelKonfig)`): A config to
-  update day's label style of calendar.
-- **backgroundColor** (`[KalendarColor](#kalendarColor)`): A color of
-  type [KalendarColor](#kalendarColor)]
+---
 
-## KalendarDayKonfig
-
-Configuration options for the calendar’s day behavior and style
-
-```kotlin
-data class KalendarDayKonfig(
-    val size: Dp,
-    val selectedTextColor: KalendarColor,
-    val borderColor: KalendarColor,
-    val indicatorColor: KalendarColor,
-    val textStyle: TextStyle,
-    val selectedBackgroundColor: KalendarColor,
-)
-
-```
-
-### Properties:
-
-- **size** (Dp): The size of the day element.
-- **selectedTextColor** ([KalendarColor](#kalendarColor)): The color of the text when a day is
-  selected.
-- **borderColor** ([KalendarColor](#kalendarColor)): The color of the border around the day element.
-- **indicatorColor** ([KalendarColor](#kalendarColor)): The color of the indicator for events.
-- **textStyle** (TextStyle): The style of the text for the day element.
-- **selectedBackgroundColor** ([KalendarColor](#kalendarColor)): The background color when a day is
-  selected.
-
-## KalendarHeaderKonfig
-
-Configuration options for the calendar’s Header View behavior and style that represents Month name
+## KalendarDayConfig
 
 ```kotlin
-data class KalendarHeaderKonfig(
-    val textStyle: TextStyle,
-    val centerAligned: Boolean
-) 
-```
-
-### Properties:
-- **textStyle** (TextStyle): The style of the text for the day element.
-- **centerAligned** (Boolean): Aligns the header in center or no.
-
-## KalendarDayLabelKonfig
-
-Configuration options for the calendar’s day label behavior and style
-
-```kotlin
-data class KalendarDayLabelKonfig(
-    val textStyle: TextStyle,
-    val textCharCount: Int,
-    val centerAligned: Boolean
+data class KalendarDayConfig(
+    val size: Dp = 56.dp,
+    val selectedTextColor: KalendarColor = Color(0xFF413D4B).asSolidColor(),
+    val borderColor: KalendarColor = Color(0xFFC39EA1).asSolidColor(),
+    val indicatorColor: KalendarColor = Color(0xFFD8A29E).asSolidColor(),
+    val textStyle: TextStyle = ...,
+    val selectedBackgroundColor: KalendarColor = Color(0xFFF7CFD3).asSolidColor(),
 )
 ```
-### Properties:
-- **textStyle** (TextStyle): The style of the text for the day element.
-- **textCharCount** (Int): Lets you set the char count in day label.
-- **centerAligned** (Boolean): Aligns the header in center or no.
+
+| Parameter | Description |
+|---|---|
+| `size` | Diameter of each day circle cell. |
+| `selectedTextColor` | Text colour when a day is selected. |
+| `borderColor` | Border ring colour shown on today's date. |
+| `indicatorColor` | Fallback dot colour for events (overridden by `KalendarEvent.eventColor`). |
+| `textStyle` | Text style for the day number. |
+| `selectedBackgroundColor` | Background fill when a day is selected. |
+
+---
+
+## KalendarHeaderConfig
+
+```kotlin
+data class KalendarHeaderConfig(
+    val textStyle: TextStyle,
+    val centerAligned: Boolean,
+)
+```
+
+| Parameter | Description |
+|---|---|
+| `textStyle` | Text style for the month/week title. |
+| `centerAligned` | `true` → title centred with arrows flanking; `false` → title leading. |
+
+---
+
+## KalendarDayLabelConfig
+
+```kotlin
+data class KalendarDayLabelConfig(
+    val textStyle: TextStyle,
+    val textCharCount: Int = 2,
+    val centerAligned: Boolean = true,
+    val dayNameFormatter: ((DayOfWeek) -> String)? = null,
+)
+```
+
+| Parameter | Description |
+|---|---|
+| `textStyle` | Text style for day-of-week labels. |
+| `textCharCount` | Characters taken from the day name when `dayNameFormatter` is `null` (e.g. `2` → "Mo"). |
+| `centerAligned` | Centre-aligns labels within their column. |
+| `dayNameFormatter` | Optional lambda for locale-aware labels; replaces `textCharCount` when non-null. |
+
+---
 
 ## KalendarColor
 
-Representation of a color in the Kalendar library. It can be a solid color or a gradient.
+```kotlin
+sealed class KalendarColor {
+    data class Solid(val color: Color) : KalendarColor()
+    data class Gradient(val colors: List<Color>) : KalendarColor()
+}
+
+fun Color.asSolidColor(): KalendarColor.Solid
+fun List<Color>.asGradientColor(): KalendarColor.Gradient
+```
+
+---
+
+## KalendarEvent
+
+```kotlin
+interface KalendarEvent {
+    val date: LocalDate
+    val eventName: String
+    val eventDescription: String?
+    val startTime: LocalDateTime? get() = null
+    val endTime: LocalDateTime? get() = null
+    val eventColor: Color? get() = null
+}
+```
+
+`BasicKalendarEvent` is a ready-to-use `data class` implementation. All three optional fields
+default to `null` so existing implementations remain source-compatible.
+
+| Property | Description |
+|---|---|
+| `date` | Date the event falls on. |
+| `eventName` | Short display name. |
+| `eventDescription` | Optional longer description. |
+| `startTime` | Optional start date-time; events on the same day sort by this in Agenda view. |
+| `endTime` | Optional end date-time; shown alongside `startTime` in Agenda view. |
+| `eventColor` | Per-event indicator dot colour; falls back to `KalendarDayConfig.indicatorColor`. |
+
+---
+
+## OnDaySelectionAction
+
+```kotlin
+sealed class OnDaySelectionAction {
+    data class Single(val onDayClick: (LocalDate, List<KalendarEvent>) -> Unit) : OnDaySelectionAction()
+    data class Multiple(val onDayClick: (LocalDate, List<KalendarEvent>) -> Unit) : OnDaySelectionAction()
+    data class Range(val onRangeSelected: (KalendarSelectedDayRange, List<KalendarEvent>) -> Unit) : OnDaySelectionAction()
+
+    companion object {
+        val NoOp: OnDaySelectionAction
+    }
+}
+```
+
+---
+
+## KalendarSelectedDayRange
+
+```kotlin
+data class KalendarSelectedDayRange(
+    override val start: LocalDate,
+    override val endInclusive: LocalDate,
+) : ClosedRange<LocalDate>
+```
+
+---
+
+## KalendarController
+
+```kotlin
+class KalendarController {
+    suspend fun scrollToDate(date: LocalDate)
+}
+
+@Composable
+fun rememberKalendarController(): KalendarController
+```
+
+Obtain via `rememberKalendarController()` and pass to `Kalendar(controller = …)`.

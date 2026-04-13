@@ -1,39 +1,56 @@
-## Kalendar: Aerial
+# Kalendar: Aerial
 
-### Screnshots
+A swipeable week-strip calendar. Each horizontal swipe moves one week forward or backward.
+Arrow buttons are not shown; navigation is gesture-only. Ideal for touch-first interfaces.
 
-| Desktop                                              | Android | iOS                                            |
-|------------------------------------------------------|----------------------------------------------------|------------------------------------------------|
-| ![AerialDesktop](../img/aerial/AerialDesktop.png)    | ![AerialAndroid](../img/aerial/AerialAndroid.png) | ![AerialIOS](../img/aerial/AerialiOS.png)      |
-
-
-A magical Composable that brings your swipable weekly calendar to life with events, day labels, and more. Perfect for managing your weekly schedule!
+## Usage
 
 ```kotlin
-fun Kalendar(
-    kalendarType: KalendarType = KalendarType.Aerial,
-    modifier: Modifier = Modifier,
-    selectedDate: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
-    events: KalendarEvents = KalendarEvents(),
-    showDayLabel: Boolean = true,
-    arrowShown: Boolean = true,
-    onDaySelectionAction: OnDaySelectionAction = OnDaySelectionAction.Single { _, _ -> },
-    kalendarKonfig: KalendarKonfig = KalendarKonfig(),
-    restrictToCurrentWeekOrMonth: Boolean = false,
-    startDayOfWeek: DayOfWeek = DayOfWeek.SUNDAY,
-) 
+Kalendar(
+    type = KalendarType.Aerial,
+    selectedDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
+    events = myEvents,
+    onDaySelectionAction = OnDaySelectionAction.Single { date, events ->
+        println("Selected $date")
+    },
+    config = KalendarConfig(
+        startDayOfWeek = DayOfWeek.MONDAY,
+        firstVisibleDate = LocalDate(2026, 4, 14),
+        minDate = LocalDate(2020, 1, 1),
+        maxDate = LocalDate(2030, 12, 31),
+    ),
+)
 ```
 
-#### Parameters:
+### Programmatic navigation
 
-- **kalendarType**  ([KalendarType](https://github.com/hi-manshu/Kalendar/blob/chore/docs/doc/Config.md#kalendar-type)): Specifies the type of calendar (e.g., monthly, weekly). Here its Aerial
-- **modifier**  (`Modifier`): Customizes the appearance and behavior of the calendar.
-- **selectedDate**  (`LocalDate`): The selected date, defaulting to the current system date.
-- **events**  ([KalendarEvents](https://github.com/hi-manshu/Kalendar/blob/chore/docs/doc/Config.md#kalendarevent)): A list of events to display on the calendar.
-- **showDayLabel**  (`Boolean`): Whether to display day labels (default: true).
-- **arrowShown**  (`Boolean`): Controls visibility of navigation arrows (default: true).
-- **onDaySelectionAction**  (`OnDaySelectionAction`): Action to trigger on day selection (default: no-op).
-- **kalendarKonfig**  ([KalendarKonfig](https://github.com/hi-manshu/Kalendar/blob/main/doc/Config.md#kalendarkonfig)): Configuration options for the calendar’s behavior and style.
-- **restrictToCurrentWeekOrMonth**  (`Boolean`): Restricts the view to the current week or month (default: false).
-- **startDayOfWeek**  (`DayOfWeek`): The day the calendar starts with (default: Sunday).
-May your days be filled with wonder, and your schedule always in perfect harmony!
+```kotlin
+val controller = rememberKalendarController()
+
+Kalendar(
+    type = KalendarType.Aerial,
+    controller = controller,
+    ...
+)
+
+Button(onClick = { scope.launch { controller.scrollToDate(LocalDate(2026, 6, 1)) } }) {
+    Text("Jump to June")
+}
+```
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `type` | `KalendarType` | — | Must be `KalendarType.Aerial`. |
+| `modifier` | `Modifier` | `Modifier` | Applied to the outermost layout. |
+| `selectedDate` | `LocalDate` | today | Initially highlighted date; determines the initially visible week page. |
+| `events` | `KalendarEvents` | `emptyList()` | Events shown as indicator dots on day cells. |
+| `onDaySelectionAction` | `OnDaySelectionAction` | `NoOp` | Single or Multiple selection handler. |
+| `config` | `KalendarConfig` | `KalendarConfig()` | All visual and behavioural settings. `showArrows` has no effect on this variant. |
+| `controller` | `KalendarController?` | `null` | Programmatic week navigation via `scrollToDate`. |
+| `dayContent` | composable lambda? | `null` | Fully replaces the built-in day cell. Receives `date`, `isSelected`, and `events`. |
+
+> **Note:** `config.showArrows` is ignored — Aerial is swipe-only by design.
+
+See [Config.md](Config.md) for all `KalendarConfig` fields.

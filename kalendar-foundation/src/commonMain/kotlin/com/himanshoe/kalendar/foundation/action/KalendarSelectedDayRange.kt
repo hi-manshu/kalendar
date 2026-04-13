@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright 2025 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
+ *  * Copyright 2026 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
  *  * Licensed under the Apache License, Version 2.0 (the "License");
  *  * you may not use this file except in compliance with the License.
  *  * You may obtain a copy of the License at
@@ -16,9 +16,30 @@
 
 package com.himanshoe.kalendar.foundation.action
 
+import androidx.compose.runtime.Immutable
 import kotlinx.datetime.LocalDate
 
+/**
+ * Represents a selected date range in the calendar. Implements [ClosedRange] so that the
+ * standard `in` operator works naturally:
+ *
+ * ```kotlin
+ * val range = KalendarSelectedDayRange(start, endInclusive)
+ * if (someDate in range) { ... }
+ * ```
+ *
+ * @property start The first date in the range (inclusive).
+ * @property endInclusive The last date in the range (inclusive). Must be on or after [start].
+ * @throws IllegalArgumentException if [endInclusive] is before [start].
+ */
+@Immutable
 data class KalendarSelectedDayRange(
-    val start: LocalDate,
-    val end: LocalDate
-)
+    override val start: LocalDate,
+    override val endInclusive: LocalDate,
+) : ClosedRange<LocalDate> {
+    init {
+        require(endInclusive >= start) {
+            "endInclusive ($endInclusive) must be on or after start ($start)"
+        }
+    }
+}

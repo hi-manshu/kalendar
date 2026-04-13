@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright 2025 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
+ *  * Copyright 2026 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
  *  * Licensed under the Apache License, Version 2.0 (the "License");
  *  * you may not use this file except in compliance with the License.
  *  * You may obtain a copy of the License at
@@ -23,33 +23,21 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.himanshoe.kalendar.foundation.color.KalendarColor
-import com.himanshoe.kalendar.foundation.color.asSolidChartColor
+import com.himanshoe.kalendar.foundation.color.asSolidColor
 
-data class KalendarDayKonfig(
-    val size: Dp,
-    val selectedTextColor: KalendarColor,
-    val borderColor: KalendarColor,
-    val indicatorColor: KalendarColor,
-    val textStyle: TextStyle,
-    val selectedBackgroundColor: KalendarColor,
-) {
-    companion object {
-
-        fun default() = KalendarDayKonfig(
-            size = 56.dp,
-            textStyle = TextStyle(
-                fontSize = 16.sp,
-                brush = Brush.linearGradient(
-                    listOf(
-                        Color(0xFF413D4B),
-                        Color(0xFFD8A29E)
-                    )
-                ),
-            ),
-            indicatorColor = Color(0xFFD8A29E).asSolidChartColor(),
-            selectedTextColor = Color(0xFF413D4B).asSolidChartColor(),
-            borderColor = Color(0xFFC39EA1).asSolidChartColor(),
-            selectedBackgroundColor = Color(0xFFF7CFD3).asSolidChartColor(),
-        )
-    }
-}
+data class KalendarDayConfig(
+    val size: Dp = 56.dp,
+    val selectedTextColor: KalendarColor = Color(0xFF413D4B).asSolidColor(),
+    val borderColor: KalendarColor = Color(0xFFC39EA1).asSolidColor(),
+    val indicatorColor: KalendarColor = Color(0xFFD8A29E).asSolidColor(),
+    val textStyle: TextStyle = TextStyle(
+        fontSize = 16.sp,
+        brush = Brush.linearGradient(
+            listOf(
+                Color(0xFF413D4B),
+                Color(0xFFD8A29E)
+            )
+        ),
+    ),
+    val selectedBackgroundColor: KalendarColor = Color(0xFFF7CFD3).asSolidColor(),
+)

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright 2025 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
+ *  * Copyright 2026 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
  *  * Licensed under the Apache License, Version 2.0 (the "License");
  *  * you may not use this file except in compliance with the License.
  *  * You may obtain a copy of the License at
@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,16 +36,12 @@ import com.himanshoe.kalendar.foundation.KalendarScaffold
 import com.himanshoe.kalendar.foundation.action.KalendarSelectedDayRange
 import com.himanshoe.kalendar.foundation.action.OnDaySelectionAction
 import com.himanshoe.kalendar.foundation.action.onDayClick
-import com.himanshoe.kalendar.foundation.color.KalendarColor
 import com.himanshoe.kalendar.foundation.component.KalendarDay
 import com.himanshoe.kalendar.foundation.component.KalendarHeader
 import com.himanshoe.kalendar.foundation.component.buildHeaderText
-import com.himanshoe.kalendar.foundation.component.config.KalendarDayKonfig
-import com.himanshoe.kalendar.foundation.component.config.KalendarDayLabelKonfig
-import com.himanshoe.kalendar.foundation.component.config.KalendarHeaderKonfig
-import com.himanshoe.kalendar.foundation.component.config.KalendarKonfig
+import com.himanshoe.kalendar.foundation.component.config.KalendarConfig
 import com.himanshoe.kalendar.foundation.event.KalendarEvents
-import com.himanshoe.kalendar.foundation.event.KalenderEvent
+import com.himanshoe.kalendar.foundation.event.KalendarEvent
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
@@ -53,30 +50,26 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
+import kotlinx.datetime.until
 
 @Composable
 internal fun KalendarAerial(
     selectedDate: LocalDate,
     modifier: Modifier = Modifier,
-    events: KalendarEvents = KalendarEvents(),
-    showDayLabel: Boolean = true,
-    onDaySelectionAction: OnDaySelectionAction = OnDaySelectionAction.Single { _, _ -> },
-    kalendarKonfig: KalendarKonfig = KalendarKonfig(),
-    restrictToCurrentWeek: Boolean = false,
-    startDayOfWeek: DayOfWeek = DayOfWeek.SUNDAY,
+    events: KalendarEvents = emptyList(),
+    onDaySelectionAction: OnDaySelectionAction = OnDaySelectionAction.NoOp,
+    config: KalendarConfig = KalendarConfig(),
+    controller: KalendarController? = null,
+    dayContent: (@Composable (date: LocalDate, isSelected: Boolean, events: List<KalendarEvent>) -> Unit)? = null,
 ) {
     KalendarAerialContent(
         selectedDate = selectedDate,
         modifier = modifier,
-        showDayLabel = showDayLabel,
         onDaySelectionAction = onDaySelectionAction,
-        dayKonfig = kalendarKonfig.kalendarDayKonfig,
-        kalendarHeaderKonfig = kalendarKonfig.kalendarHeaderKonfig,
-        kalendarDayLabelKonfig = kalendarKonfig.kalendarDayLabelKonfig,
-        restrictToCurrentWeek = restrictToCurrentWeek,
         events = events,
-        backgroundColor = kalendarKonfig.backgroundColor,
-        startDayOfWeek = startDayOfWeek
+        config = config,
+        controller = controller,
+        dayContent = dayContent,
     )
 }
 
@@ -84,46 +77,66 @@ internal fun KalendarAerial(
 private fun KalendarAerialContent(
     selectedDate: LocalDate,
     modifier: Modifier,
-    showDayLabel: Boolean,
     onDaySelectionAction: OnDaySelectionAction,
-    dayKonfig: KalendarDayKonfig,
-    kalendarHeaderKonfig: KalendarHeaderKonfig,
-    kalendarDayLabelKonfig: KalendarDayLabelKonfig,
-    restrictToCurrentWeek: Boolean,
     events: KalendarEvents,
-    backgroundColor: KalendarColor,
-    startDayOfWeek: DayOfWeek
+    config: KalendarConfig,
+    controller: KalendarController?,
+    dayContent: (@Composable (date: LocalDate, isSelected: Boolean, events: List<KalendarEvent>) -> Unit)? = null,
 ) {
+    val startDayOfWeek = config.startDayOfWeek
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
+    val initialDate = config.firstVisibleDate ?: selectedDate
 
-    var currentDay by remember { mutableStateOf(selectedDate) }
-    var rangeStartDate by remember { mutableStateOf<LocalDate?>(null) }
-    var rangeEndDate by remember { mutableStateOf<LocalDate?>(null) }
+    var currentDay by remember { mutableStateOf(initialDate) }
+    var rangeStartDate by remember {
+        mutableStateOf<LocalDate?>(config.initialSelectedRange?.start)
+    }
+    var rangeEndDate by remember {
+        mutableStateOf<LocalDate?>(config.initialSelectedRange?.endInclusive)
+    }
     val coroutineScope = rememberCoroutineScope()
-    val selectedRange = remember { mutableStateOf<KalendarSelectedDayRange?>(null) }
+    val selectedRange = remember {
+        mutableStateOf<KalendarSelectedDayRange?>(config.initialSelectedRange)
+    }
     var clickedNewDate by remember { mutableStateOf(selectedDate) }
-    var clickedNewDates by remember { mutableStateOf(listOf(selectedDate)) }
+    var clickedNewDates by remember {
+        mutableStateOf(
+            if (config.initialSelectedDates.isNotEmpty()) config.initialSelectedDates
+            else listOf(selectedDate)
+        )
+    }
     val daysOfWeek = DayOfWeek.entries.rotate(distance = startDayOfWeek.ordinal)
+    val initialPageOffset = remember(initialDate, selectedDate) {
+        selectedDate.until(initialDate, DateTimeUnit.DAY).toInt() / 7
+    }
     val pagerState = rememberPagerState(
-        initialPage = Int.MAX_VALUE / 2,
+        initialPage = Int.MAX_VALUE / 2 + initialPageOffset,
         pageCount = { Int.MAX_VALUE }
     )
+    val eventsByDate = remember(events) { events.groupBy { it.date } }
     val calendarIconEnabled = pagerState.currentPage != Int.MAX_VALUE / 2
     val headerText = remember(currentDay) {
-        getWeekDates(
-            currentDay = currentDay,
-            startDayOfWeek = startDayOfWeek
-        ).buildHeaderText()
+        getWeekDates(currentDay = currentDay, startDayOfWeek = startDayOfWeek).buildHeaderText()
+    }
+
+    DisposableEffect(controller) {
+        controller?.attachScrollImpl { date ->
+            val dayDiff = selectedDate.until(date, DateTimeUnit.DAY)
+            val weekOffset = dayDiff / 7
+            val targetPage = Int.MAX_VALUE / 2 + weekOffset.toInt()
+            pagerState.animateScrollToPage(targetPage)
+        }
+        onDispose { controller?.detachScrollImpl() }
     }
 
     Column(
-        modifier = modifier.background(brush = Brush.linearGradient(backgroundColor.value)),
+        modifier = modifier.background(brush = Brush.linearGradient(config.backgroundColor.value)),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         KalendarHeader(
             modifier = Modifier,
             title = headerText,
-            arrowShown = false,
+            showArrows = false,
             calendarIconEnabled = calendarIconEnabled,
             showCalendarIcon = true,
             onNavigateToday = {
@@ -134,8 +147,8 @@ private fun KalendarAerialContent(
                     }
                 }
             },
-            kalendarHeaderKonfig = kalendarHeaderKonfig,
-            canNavigateBack = !restrictToCurrentWeek || currentDay > today,
+            headerConfig = config.headerConfig,
+            canNavigateBack = true,
         )
 
         HorizontalPager(
@@ -146,55 +159,47 @@ private fun KalendarAerialContent(
                 value = (page - Int.MAX_VALUE / 2) * 7,
                 unit = DateTimeUnit.DAY
             )
-            val displayDates = getWeekDates(
-                currentDay = startDate,
-                startDayOfWeek = startDayOfWeek
-            )
+            val displayDates = getWeekDates(currentDay = startDate, startDayOfWeek = startDayOfWeek)
 
             KalendarScaffold(
                 modifier = Modifier.fillMaxWidth(),
-                showDayLabel = showDayLabel,
+                showDayLabel = config.showDayLabel,
                 dayOfWeek = { daysOfWeek },
-                kalendarDayLabelKonfig = kalendarDayLabelKonfig,
+                dayLabelConfig = config.dayLabelConfig,
                 dates = { displayDates },
             ) { date ->
-                KalendarDay(
-                    date = date,
-                    selectedRange = selectedRange.value,
-                    selectedDates = clickedNewDates,
-                    onDayClick = { clickedDate, events: List<KalenderEvent> ->
-                        clickedDate.onDayClick(
-                            events = events,
-                            rangeStartDate = rangeStartDate,
-                            rangeEndDate = rangeEndDate,
-                            onDaySelectionAction = onDaySelectionAction,
-                            onClickedNewDate = {
-                                clickedNewDate = it
-                            },
-                            onMultipleClickedNewDate = { _clickedDate ->
-                                clickedNewDates = clickedNewDates.toMutableList().apply {
-                                    if (clickedNewDates.contains(_clickedDate)) {
-                                        remove(_clickedDate)
-                                    } else {
-                                        add(_clickedDate)
+                val dateEvents = eventsByDate[date] ?: emptyList()
+                if (dayContent != null) {
+                    val isSelected = date == clickedNewDate || clickedNewDates.contains(date)
+                    dayContent(date, isSelected, dateEvents)
+                } else {
+                    KalendarDay(
+                        date = date,
+                        selectedRange = selectedRange.value,
+                        selectedDates = clickedNewDates,
+                        onDayClick = { clickedDate, clickedEvents: List<KalendarEvent> ->
+                            clickedDate.onDayClick(
+                                events = clickedEvents,
+                                rangeStartDate = rangeStartDate,
+                                rangeEndDate = rangeEndDate,
+                                onDaySelectionAction = onDaySelectionAction,
+                                onClickedNewDate = { clickedNewDate = it },
+                                onMultipleClickedNewDate = { date ->
+                                    clickedNewDates = clickedNewDates.toMutableList().apply {
+                                        if (clickedNewDates.contains(date)) remove(date) else add(date)
                                     }
-                                }
-                            },
-                            onClickedRangeStartDate = {
-                                rangeStartDate = it
-                            },
-                            onClickedRangeEndDate = {
-                                rangeEndDate = it
-                            },
-                            onUpdateSelectedRange = {
-                                selectedRange.value = it
-                            },
-                        )
-                    },
-                    dayKonfig = dayKonfig,
-                    events = events,
-                    selectedDate = clickedNewDate,
-                )
+                                },
+                                onClickedRangeStartDate = { rangeStartDate = it },
+                                onClickedRangeEndDate = { rangeEndDate = it },
+                                onUpdateSelectedRange = { selectedRange.value = it },
+                            )
+                        },
+                        dayConfig = config.dayConfig,
+                        events = dateEvents,
+                        selectedDate = clickedNewDate,
+                        isDisabled = config.disabledDates(date),
+                    )
+                }
             }
         }
 
@@ -204,6 +209,8 @@ private fun KalendarAerialContent(
                 unit = DateTimeUnit.DAY
             )
             currentDay = startDate
+            val weekDates = getWeekDates(currentDay, startDayOfWeek)
+            config.onVisibleRangeChange?.invoke(weekDates.first(), weekDates.last())
         }
     }
 }

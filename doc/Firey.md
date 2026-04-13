@@ -1,40 +1,74 @@
-## Kalendar : Firey
+# Kalendar: Firey
 
-### Screnshots
+A week-strip calendar that displays a single scrollable week row. Navigate between weeks with
+previous/next arrow buttons. Ideal for compact horizontal layouts.
 
-| Desktop                                        | Android                                         | iOS                                    |
-|------------------------------------------------|-------------------------------------------------|----------------------------------------|
-| ![FireyDesktop](../img/firey/FireyDesktop.png) | ![FirelyAndroid](../img/firey/FireyAndroid.png) | ![FireyIOS](../img/firey/FireyIOS.png) |
-
-
-A magical Composable that brings your weekly calendar to life with events, day labels, and more. Perfect for managing your Weekly schedule!
+## Usage
 
 ```kotlin
-fun Kalendar(
-    kalendarType: KalendarType = KalendarType.Firey,
-    modifier: Modifier = Modifier,
-    selectedDate: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
-    events: KalendarEvents = KalendarEvents(),
-    showDayLabel: Boolean = true,
-    arrowShown: Boolean = true,
-    onDaySelectionAction: OnDaySelectionAction = OnDaySelectionAction.Single { _, _ -> },
-    kalendarKonfig: KalendarKonfig = KalendarKonfig(),
-    restrictToCurrentWeekOrMonth: Boolean = false,
-    startDayOfWeek: DayOfWeek = DayOfWeek.SUNDAY,
-) 
+Kalendar(
+    type = KalendarType.Firey,
+    selectedDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
+    events = myEvents,
+    onDaySelectionAction = OnDaySelectionAction.Single { date, events ->
+        println("Selected $date")
+    },
+    config = KalendarConfig(
+        startDayOfWeek = DayOfWeek.MONDAY,
+        firstVisibleDate = LocalDate(2026, 4, 14),
+        disabledDates = { date -> date < LocalDate(2026, 1, 1) },
+    ),
+)
 ```
 
-#### Parameters:
+### Multiple selection
 
-- **kalendarType**  ([KalendarType](https://github.com/hi-manshu/Kalendar/blob/chore/docs/doc/Config.md#kalendar-type)): Specifies the type of calendar (e.g., monthly, weekly). Here its Aerial
-- **modifier**  (`Modifier`): Customizes the appearance and behavior of the calendar.
-- **selectedDate**  (`LocalDate`): The selected date, defaulting to the current system date.
-- **events**  ([KalendarEvents](https://github.com/hi-manshu/Kalendar/blob/chore/docs/doc/Config.md#kalendarevent)): A list of events to display on the calendar.
-- **showDayLabel**  (`Boolean`): Whether to display day labels (default: true).
-- **arrowShown**  (`Boolean`): Controls visibility of navigation arrows (default: true).
-- **onDaySelectionAction**  (`OnDaySelectionAction`): Action to trigger on day selection (default: no-op).
-- **kalendarKonfig**  ([KalendarKonfig](https://github.com/hi-manshu/Kalendar/blob/main/doc/Config.md#kalendarkonfig)): Configuration options for the calendar’s behavior and style.
-- **restrictToCurrentWeekOrMonth**  (`Boolean`): Restricts the view to the current week or month (default: false).
-- **startDayOfWeek**  (`DayOfWeek`): The day the calendar starts with (default: Sunday).
+```kotlin
+Kalendar(
+    type = KalendarType.Firey,
+    onDaySelectionAction = OnDaySelectionAction.Multiple { date, events ->
+        selectedDates += date
+    },
+    config = KalendarConfig(
+        initialSelectedDates = listOf(
+            LocalDate(2026, 4, 14),
+            LocalDate(2026, 4, 16),
+        ),
+    ),
+)
+```
 
-May your days be filled with wonder, and your schedule always in perfect harmony!
+### Custom day cell
+
+```kotlin
+Kalendar(
+    type = KalendarType.Firey,
+    dayContent = { date, isSelected, events ->
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(date.dayOfWeek.name.take(1))
+            Text(
+                text = date.dayOfMonth.toString(),
+                color = if (isSelected) Color.Red else Color.Unspecified,
+            )
+        }
+    },
+)
+```
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `type` | `KalendarType` | — | Must be `KalendarType.Firey`. |
+| `modifier` | `Modifier` | `Modifier` | Applied to the outermost layout. |
+| `selectedDate` | `LocalDate` | today | Initially highlighted date; determines the initially visible week. |
+| `events` | `KalendarEvents` | `emptyList()` | Events shown as indicator dots on day cells. |
+| `onDaySelectionAction` | `OnDaySelectionAction` | `NoOp` | Single or Multiple selection handler. |
+| `config` | `KalendarConfig` | `KalendarConfig()` | All visual and behavioural settings. |
+| `controller` | `KalendarController?` | `null` | Programmatic week navigation via `scrollToDate`. |
+| `dayContent` | composable lambda? | `null` | Fully replaces the built-in day cell. Receives `date`, `isSelected`, and `events`. |
+
+> **Note:** Range selection via `OnDaySelectionAction.Range` is not visually supported in Firey.
+> Use `KalendarType.Oceanic` or `KalendarType.Solaris` for range selection.
+
+See [Config.md](Config.md) for all `KalendarConfig` fields.

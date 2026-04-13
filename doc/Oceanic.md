@@ -1,40 +1,76 @@
-## Kalendar : Oceanic
+# Kalendar: Oceanic
 
-### Screnshots
+A full-month grid calendar navigated with previous/next arrow buttons. Displays one month at a time
+in a 7-column week grid. Supports single, multiple, and range day selection.
 
-| Desktop                                            | Android                                         | iOS                                      |
-|----------------------------------------------------|-------------------------------------------------|------------------------------------------|
-| ![OceanicDesktop](../img/oceanic/OceanicDesktop.png) | ![OceanicAndroid](../img/oceanic/OceanicAndroid.png) | ![OceanicIOS](../img/oceanic/OceaniciOS.png) |
-
-
-A magical Composable that brings your monthly calendar to life with events, day labels, and more. Perfect for managing your Monthly schedule!
+## Usage
 
 ```kotlin
-fun Kalendar(
-    kalendarType: KalendarType = KalendarType.Oceanic,
-    modifier: Modifier = Modifier,
-    selectedDate: LocalDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
-    events: KalendarEvents = KalendarEvents(),
-    showDayLabel: Boolean = true,
-    arrowShown: Boolean = true,
-    onDaySelectionAction: OnDaySelectionAction = OnDaySelectionAction.Single { _, _ -> },
-    kalendarKonfig: KalendarKonfig = KalendarKonfig(),
-    restrictToCurrentWeekOrMonth: Boolean = false,
-    startDayOfWeek: DayOfWeek = DayOfWeek.SUNDAY,
-) 
+Kalendar(
+    type = KalendarType.Oceanic,
+    selectedDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
+    events = myEvents,
+    onDaySelectionAction = OnDaySelectionAction.Single { date, events ->
+        println("Selected $date with ${events.size} events")
+    },
+    config = KalendarConfig(
+        startDayOfWeek = DayOfWeek.SUNDAY,
+        minDate = LocalDate(2020, 1, 1),
+        maxDate = LocalDate(2030, 12, 31),
+        disabledDates = { date -> date.dayOfWeek == DayOfWeek.SUNDAY },
+        onVisibleRangeChange = { start, end ->
+            loadEvents(start, end)
+        },
+    ),
+)
 ```
 
-#### Parameters:
+### Range selection
 
-- **kalendarType**  ([KalendarType](https://github.com/hi-manshu/Kalendar/blob/chore/docs/doc/Config.md#kalendar-type)): Specifies the type of calendar (e.g., monthly, weekly). Here its Aerial
-- **modifier**  (`Modifier`): Customizes the appearance and behavior of the calendar.
-- **selectedDate**  (`LocalDate`): The selected date, defaulting to the current system date.
-- **events**  ([KalendarEvents](https://github.com/hi-manshu/Kalendar/blob/chore/docs/doc/Config.md#kalendarevent)): A list of events to display on the calendar.
-- **showDayLabel**  (`Boolean`): Whether to display day labels (default: true).
-- **arrowShown**  (`Boolean`): Controls visibility of navigation arrows (default: true).
-- **onDaySelectionAction**  (`OnDaySelectionAction`): Action to trigger on day selection (default: no-op).
-- **kalendarKonfig**  ([KalendarKonfig](https://github.com/hi-manshu/Kalendar/blob/main/doc/Config.md#kalendarkonfig)): Configuration options for the calendar’s behavior and style.
-- **restrictToCurrentWeekOrMonth**  (`Boolean`): Restricts the view to the current week or month (default: false).
-- **startDayOfWeek**  (`DayOfWeek`): The day the calendar starts with (default: Sunday).
+```kotlin
+Kalendar(
+    type = KalendarType.Oceanic,
+    onDaySelectionAction = OnDaySelectionAction.Range { range, events ->
+        println("Range: ${range.start} → ${range.endInclusive}")
+    },
+    config = KalendarConfig(
+        initialSelectedRange = KalendarSelectedDayRange(
+            start = LocalDate(2026, 4, 10),
+            endInclusive = LocalDate(2026, 4, 20),
+        ),
+    ),
+)
+```
 
-May your days be filled with wonder, and your schedule always in perfect harmony!
+### Custom day cell
+
+```kotlin
+Kalendar(
+    type = KalendarType.Oceanic,
+    dayContent = { date, isSelected, events ->
+        Box(
+            modifier = Modifier
+                .aspectRatio(1f)
+                .background(if (isSelected) Color.Blue else Color.Transparent),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(date.dayOfMonth.toString())
+        }
+    },
+)
+```
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `type` | `KalendarType` | — | Must be `KalendarType.Oceanic`. |
+| `modifier` | `Modifier` | `Modifier` | Applied to the outermost layout. |
+| `selectedDate` | `LocalDate` | today | Initially highlighted date. |
+| `events` | `KalendarEvents` | `emptyList()` | Events shown as indicator dots on day cells. |
+| `onDaySelectionAction` | `OnDaySelectionAction` | `NoOp` | Single, Multiple, or Range selection handler. |
+| `config` | `KalendarConfig` | `KalendarConfig()` | All visual and behavioural settings. |
+| `controller` | `KalendarController?` | `null` | Programmatic month navigation via `scrollToDate`. |
+| `dayContent` | composable lambda? | `null` | Fully replaces the built-in day cell. Receives `date`, `isSelected`, and `events`. |
+
+See [Config.md](Config.md) for all `KalendarConfig` fields.

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright 2025 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
+ *  * Copyright 2026 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
  *  * Licensed under the Apache License, Version 2.0 (the "License");
  *  * you may not use this file except in compliance with the License.
  *  * You may obtain a copy of the License at
@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,148 +34,156 @@ import com.himanshoe.kalendar.foundation.KalendarScaffold
 import com.himanshoe.kalendar.foundation.action.KalendarSelectedDayRange
 import com.himanshoe.kalendar.foundation.action.OnDaySelectionAction
 import com.himanshoe.kalendar.foundation.action.onDayClick
-import com.himanshoe.kalendar.foundation.color.KalendarColor
 import com.himanshoe.kalendar.foundation.component.KalendarDay
 import com.himanshoe.kalendar.foundation.component.KalendarHeader
-import com.himanshoe.kalendar.foundation.component.config.KalendarDayKonfig
-import com.himanshoe.kalendar.foundation.component.config.KalendarDayLabelKonfig
-import com.himanshoe.kalendar.foundation.component.config.KalendarKonfig
+import com.himanshoe.kalendar.foundation.component.config.KalendarConfig
 import com.himanshoe.kalendar.foundation.event.KalendarEvents
-import com.himanshoe.kalendar.foundation.event.KalenderEvent
-import kotlinx.datetime.Clock
+import com.himanshoe.kalendar.foundation.event.KalendarEvent
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
-import kotlinx.datetime.todayIn
 
 @Composable
 internal fun KalendarOceanic(
     selectedDate: LocalDate,
-    arrowShown: Boolean,
-    showDayLabel: Boolean,
-    kalendarKonfig: KalendarKonfig,
+    config: KalendarConfig,
     events: KalendarEvents,
     modifier: Modifier = Modifier,
-    restrictToCurrentMonth: Boolean,
-    startDayOfWeek: DayOfWeek = DayOfWeek.SUNDAY,
-    onDaySelectionAction: OnDaySelectionAction = OnDaySelectionAction.Single { _, _ -> },
+    controller: KalendarController? = null,
+    onDaySelectionAction: OnDaySelectionAction = OnDaySelectionAction.NoOp,
+    dayContent: (@Composable (date: LocalDate, isSelected: Boolean, events: List<KalendarEvent>) -> Unit)? = null,
 ) {
     KalendarOceanicContent(
         selectedDate = selectedDate,
-        startDayOfWeek = startDayOfWeek,
         modifier = modifier,
-        arrowShown = arrowShown,
-        backgroundColor = kalendarKonfig.backgroundColor,
-        showDayLabel = showDayLabel,
-        restrictToCurrentMonth = restrictToCurrentMonth,
         onDaySelectionAction = onDaySelectionAction,
-        dayKonfig = kalendarKonfig.kalendarDayKonfig,
-        kalendarDayLabelKonfig = kalendarKonfig.kalendarDayLabelKonfig,
-        events = events
+        events = events,
+        config = config,
+        controller = controller,
+        dayContent = dayContent,
     )
 }
 
 @Composable
 private fun KalendarOceanicContent(
     selectedDate: LocalDate,
-    startDayOfWeek: DayOfWeek,
-    arrowShown: Boolean,
-    restrictToCurrentMonth: Boolean,
-    backgroundColor: KalendarColor,
-    showDayLabel: Boolean,
     onDaySelectionAction: OnDaySelectionAction,
-    dayKonfig: KalendarDayKonfig,
     events: KalendarEvents,
-    kalendarDayLabelKonfig: KalendarDayLabelKonfig,
+    config: KalendarConfig,
     modifier: Modifier = Modifier,
+    controller: KalendarController? = null,
+    dayContent: (@Composable (date: LocalDate, isSelected: Boolean, events: List<KalendarEvent>) -> Unit)? = null,
 ) {
+    val startDayOfWeek = config.startDayOfWeek
+    val initialDate = config.firstVisibleDate ?: selectedDate
     var currentMonth by remember {
+        mutableStateOf(initialDate.minus(initialDate.dayOfMonth - 1, DateTimeUnit.DAY))
+    }
+    val selectedRange = remember {
+        mutableStateOf<KalendarSelectedDayRange?>(config.initialSelectedRange)
+    }
+    var rangeStartDate by remember {
+        mutableStateOf<LocalDate?>(config.initialSelectedRange?.start)
+    }
+    var rangeEndDate by remember {
+        mutableStateOf<LocalDate?>(config.initialSelectedRange?.endInclusive)
+    }
+    var clickedNewDate by remember { mutableStateOf(selectedDate) }
+    var clickedNewDates by remember {
         mutableStateOf(
-            selectedDate.minus(
-                selectedDate.dayOfMonth - 1,
-                DateTimeUnit.DAY
-            )
+            if (config.initialSelectedDates.isNotEmpty()) config.initialSelectedDates
+            else listOf(selectedDate)
         )
     }
-    val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
-    val selectedRange = remember { mutableStateOf<KalendarSelectedDayRange?>(null) }
-    var rangeStartDate by remember { mutableStateOf<LocalDate?>(null) }
-    var rangeEndDate by remember { mutableStateOf<LocalDate?>(null) }
-    var clickedNewDate by remember { mutableStateOf(selectedDate) }
     val daysOfWeek = DayOfWeek.entries.rotate(startDayOfWeek.ordinal)
     val displayDates by remember(currentMonth, startDayOfWeek) {
         mutableStateOf(getMonthDates(currentMonth, startDayOfWeek))
     }
-    var clickedNewDates by remember { mutableStateOf(listOf(selectedDate)) }
-    val isCurrentMonth = currentMonth.year == today.year && currentMonth.month > today.month
+    val eventsByDate = remember(events) { events.groupBy { it.date } }
+
+    val canGoBack = config.minDate?.let { min ->
+        currentMonth > min.minus(min.dayOfMonth - 1, DateTimeUnit.DAY)
+    } ?: true
+    val canGoForward = config.maxDate?.let { max ->
+        currentMonth < max.minus(max.dayOfMonth - 1, DateTimeUnit.DAY)
+    } ?: true
+
+    DisposableEffect(controller) {
+        controller?.attachScrollImpl { date ->
+            currentMonth = date.minus(date.dayOfMonth - 1, DateTimeUnit.DAY)
+        }
+        onDispose { controller?.detachScrollImpl() }
+    }
+
+    LaunchedEffect(currentMonth) {
+        config.onVisibleRangeChange?.invoke(
+            currentMonth,
+            currentMonth.plus(1, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY)
+        )
+    }
 
     Column(
-        modifier = modifier.background(brush = Brush.linearGradient(backgroundColor.value)),
+        modifier = modifier.background(brush = Brush.linearGradient(config.backgroundColor.value)),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         KalendarHeader(
             modifier = Modifier,
             month = currentMonth.month,
             year = currentMonth.year,
-            arrowShown = arrowShown,
-            canNavigateBack = !restrictToCurrentMonth || isCurrentMonth,
+            showArrows = config.showArrows,
+            canNavigateBack = canGoBack,
             onPreviousClick = {
-                if (!restrictToCurrentMonth || isCurrentMonth) {
+                if (canGoBack) {
                     currentMonth = currentMonth.minus(1, DateTimeUnit.MONTH)
                 }
             },
-            onNextClick = { currentMonth = currentMonth.plus(1, DateTimeUnit.MONTH) }
+            onNextClick = {
+                if (canGoForward) {
+                    currentMonth = currentMonth.plus(1, DateTimeUnit.MONTH)
+                }
+            }
         )
         KalendarScaffold(
             modifier = Modifier.fillMaxWidth(),
-            showDayLabel = showDayLabel,
+            showDayLabel = config.showDayLabel,
             dayOfWeek = { daysOfWeek },
-            kalendarDayLabelKonfig = kalendarDayLabelKonfig,
+            dayLabelConfig = config.dayLabelConfig,
             dates = { displayDates },
         ) { date ->
-            if (date.month == currentMonth.month) {
+            val isCurrentMonth = date.month == currentMonth.month
+            val dateEvents = eventsByDate[date] ?: emptyList()
+            if (dayContent != null) {
+                val isSelected = date == clickedNewDate || clickedNewDates.contains(date)
+                dayContent(date, isSelected, dateEvents)
+            } else {
                 KalendarDay(
                     date = date,
                     selectedRange = selectedRange.value,
                     selectedDates = clickedNewDates,
-                    onDayClick = { clickedDate, events: List<KalenderEvent> ->
+                    onDayClick = { clickedDate, clickedEvents: List<KalendarEvent> ->
                         clickedDate.onDayClick(
-                            events = events,
+                            events = clickedEvents,
                             rangeStartDate = rangeStartDate,
                             rangeEndDate = rangeEndDate,
                             onDaySelectionAction = onDaySelectionAction,
-                            onClickedNewDate = {
-                                clickedNewDate = it
-                            },
-                            onMultipleClickedNewDate = { _clickedDate ->
+                            onClickedNewDate = { clickedNewDate = it },
+                            onMultipleClickedNewDate = { date ->
                                 clickedNewDates = clickedNewDates.toMutableList().apply {
-                                    if (clickedNewDates.contains(_clickedDate)) {
-                                        remove(_clickedDate)
-                                    } else {
-                                        add(_clickedDate)
-                                    }
+                                    if (clickedNewDates.contains(date)) remove(date) else add(date)
                                 }
                             },
-                            onClickedRangeStartDate = {
-                                rangeStartDate = it
-                            },
-                            onClickedRangeEndDate = {
-                                rangeEndDate = it
-                            },
-                            onUpdateSelectedRange = {
-                                selectedRange.value = it
-                            },
+                            onClickedRangeStartDate = { rangeStartDate = it },
+                            onClickedRangeEndDate = { rangeEndDate = it },
+                            onUpdateSelectedRange = { selectedRange.value = it },
                         )
                     },
-                    dayKonfig = dayKonfig,
-                    events = events,
+                    dayConfig = config.dayConfig,
+                    events = dateEvents,
                     selectedDate = clickedNewDate,
+                    isDisabled = config.disabledDates(date) || !isCurrentMonth,
                 )
-            } else {
-                Box(modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -187,9 +197,6 @@ internal fun getMonthDates(
     val lastDayOfMonth = firstDayOfMonth.plus(1, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY)
     val firstDayOffset = (firstDayOfMonth.dayOfWeek.ordinal - startDayOfWeek.ordinal + 7) % 7
     return (-firstDayOffset until lastDayOfMonth.dayOfMonth).map {
-        firstDayOfMonth.plus(
-            it.toLong(),
-            DateTimeUnit.DAY
-        )
+        firstDayOfMonth.plus(it.toLong(), DateTimeUnit.DAY)
     }
 }

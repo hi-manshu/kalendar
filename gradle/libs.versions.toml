@@ -1,5 +1,6 @@
 [versions]
 agp = "8.9.0"
+androidx-core-ktx = "1.16.0"
 detektCli = "1.23.8"
 detektFormatting = "1.23.8"
 kalendarFoundation = "1.0.0"
@@ -7,6 +8,7 @@ kotlin = "2.1.10"
 jetbrain-compose = "1.7.3"
 androidx-activityCompose = "1.10.1"
 kotlinxDatetime = "0.6.2"
+kotlinxCoroutines = "1.9.0"
 lifecycleViewmodelCompose = "2.8.2"
 publish = "0.31.0"
 dokka = "2.0.0"
@@ -18,8 +20,10 @@ dokka = { module = "org.jetbrains.dokka:android-documentation-plugin", version.r
 detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detektFormatting" }
 kalendar-foundation = { module = "com.himanshoe:kalendar-foundation", version.ref = "kalendarFoundation" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core-ktx" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
 
 [plugins]

@@ -1,0 +1,145 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_foundation:
+        description: 'kalendar-foundation version (e.g. 1.0.1) — leave empty to skip'
+        required: false
+        type: string
+      version_kalendar:
+        description: 'kalendar version (e.g. 2.1.0) — leave empty to skip'
+        required: false
+        type: string
+      version_sync:
+        description: 'kalendar-sync version (e.g. 1.0.0) — leave empty to skip'
+        required: false
+        type: string
+
+jobs:
+  release:
+    name: Publish & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate inputs
+        run: |
+          if [ -z "${{ github.event.inputs.version_foundation }}" ] && \
+             [ -z "${{ github.event.inputs.version_kalendar }}" ] && \
+             [ -z "${{ github.event.inputs.version_sync }}" ]; then
+            echo "::error::At least one module version must be specified."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Bump versions in gradle.properties
+        run: |
+          [ -n "${{ github.event.inputs.version_foundation }}" ] && \
+            sed -i "s/^FOUNDATION_VERSION_NAME=.*/FOUNDATION_VERSION_NAME=${{ github.event.inputs.version_foundation }}/" gradle.properties
+          [ -n "${{ github.event.inputs.version_kalendar }}" ] && \
+            sed -i "s/^KALENDAR_VERSION_NAME=.*/KALENDAR_VERSION_NAME=${{ github.event.inputs.version_kalendar }}/" gradle.properties
+          [ -n "${{ github.event.inputs.version_sync }}" ] && \
+            sed -i "s/^SYNC_VERSION_NAME=.*/SYNC_VERSION_NAME=${{ github.event.inputs.version_sync }}/" gradle.properties
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          # Use the first non-empty version as the primary release tag (preference order)
+          TAG=""
+          for V in "${{ github.event.inputs.version_kalendar }}" \
+                   "${{ github.event.inputs.version_foundation }}" \
+                   "${{ github.event.inputs.version_sync }}"; do
+            if [ -n "$V" ]; then TAG="$V"; break; fi
+          done
+          echo "tag=v${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit version bumps
+        run: |
+          git add gradle.properties
+          git commit -m "Release ${{ steps.tag.outputs.tag }}"
+
+      - name: Create and push tag
+        run: |
+          git tag "${{ steps.tag.outputs.tag }}"
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin "${{ steps.tag.outputs.tag }}"
+
+      - name: Publish to Maven Central
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+        run: |
+          TASKS=""
+          [ -n "${{ github.event.inputs.version_foundation }}" ] && \
+            TASKS="$TASKS :kalendar-foundation:publishAllPublicationsToMavenCentralRepository"
+          [ -n "${{ github.event.inputs.version_kalendar }}" ] && \
+            TASKS="$TASKS :kalendar:publishAllPublicationsToMavenCentralRepository"
+          [ -n "${{ github.event.inputs.version_sync }}" ] && \
+            TASKS="$TASKS :kalendar-sync:publishAllPublicationsToMavenCentralRepository"
+          ./gradlew $TASKS --no-configuration-cache
+
+      - name: Build release summary
+        id: summary
+        run: |
+          MODULES=""
+          [ -n "${{ github.event.inputs.version_foundation }}" ] && \
+            MODULES="${MODULES}- \`kalendar-foundation\` → \`${{ github.event.inputs.version_foundation }}\`\n"
+          [ -n "${{ github.event.inputs.version_kalendar }}" ] && \
+            MODULES="${MODULES}- \`kalendar\` → \`${{ github.event.inputs.version_kalendar }}\`\n"
+          [ -n "${{ github.event.inputs.version_sync }}" ] && \
+            MODULES="${MODULES}- \`kalendar-sync\` → \`${{ github.event.inputs.version_sync }}\`\n"
+          echo "modules=$MODULES" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes from commits
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log "${PREV_TAG}..HEAD~1" --pretty=format:"- %s" --no-merges)
+            printf "## Modules\n\n${{ steps.summary.outputs.modules }}\n## Changes\n\n%s" "$COMMITS" > release_notes.txt
+          else
+            printf "## Modules\n\n${{ steps.summary.outputs.modules }}" > release_notes.txt
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          PRERELEASE=""
+          for V in "${{ github.event.inputs.version_foundation }}" \
+                   "${{ github.event.inputs.version_kalendar }}" \
+                   "${{ github.event.inputs.version_sync }}"; do
+            if echo "$V" | grep -qi "rc\|alpha\|beta"; then
+              PRERELEASE="--prerelease"; break
+            fi
+          done
+          gh release create "${{ steps.tag.outputs.tag }}" \
+            --title "${{ steps.tag.outputs.tag }}" \
+            --notes-file release_notes.txt \
+            $PRERELEASE

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright 2025 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
+ *  * Copyright 2026 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
  *  * Licensed under the Apache License, Version 2.0 (the "License");
  *  * you may not use this file except in compliance with the License.
  *  * You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 
 package com.himanshoe.kalendar.foundation.component.config
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -23,13 +24,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 
-data class KalendarHeaderKonfig(
+@Immutable
+data class KalendarHeaderConfig(
     val textStyle: TextStyle,
     val centerAligned: Boolean
 ) {
     companion object {
 
-        fun default() = KalendarHeaderKonfig(
+        fun default() = KalendarHeaderConfig(
             centerAligned = true,
             textStyle = TextStyle(
                 fontWeight = FontWeight.SemiBold,

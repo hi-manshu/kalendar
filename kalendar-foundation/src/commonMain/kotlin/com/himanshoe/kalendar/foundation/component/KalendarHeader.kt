@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright 2025 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
+ *  * Copyright 2026 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
  *  * Licensed under the Apache License, Version 2.0 (the "License");
  *  * you may not use this file except in compliance with the License.
  *  * You may obtain a copy of the License at
@@ -49,7 +49,7 @@ import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.toLowerCase
 import androidx.compose.ui.unit.dp
-import com.himanshoe.kalendar.foundation.component.config.KalendarHeaderKonfig
+import com.himanshoe.kalendar.foundation.component.config.KalendarHeaderConfig
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
 
@@ -61,8 +61,8 @@ fun KalendarHeader(
     canNavigateBack: Boolean = true,
     showCalendarIcon: Boolean = false,
     calendarIconEnabled: Boolean = false,
-    arrowShown: Boolean = true,
-    kalendarHeaderKonfig: KalendarHeaderKonfig = KalendarHeaderKonfig.default(),
+    showArrows: Boolean = true,
+    headerConfig: KalendarHeaderConfig = KalendarHeaderConfig.default(),
     onPreviousClick: () -> Unit = {},
     onNextClick: () -> Unit = {},
     onNavigateToday: () -> Unit = {},
@@ -71,16 +71,16 @@ fun KalendarHeader(
         remember(month, year, Locale.current) { getTitleText(month, year, Locale.current) }
 
     KalendarHeaderContent(
-        arrowShown = arrowShown,
+        showArrows = showArrows,
         titleText = titleText,
         onPreviousClick = onPreviousClick,
         onNextClick = onNextClick,
         onNavigateToday = onNavigateToday,
         showCalendarIcon = showCalendarIcon,
         canNavigateBack = canNavigateBack,
-        centerAligned = kalendarHeaderKonfig.centerAligned,
+        centerAligned = headerConfig.centerAligned,
         modifier = modifier.defaultMinSize(minHeight = 56.dp),
-        kalendarHeaderKonfig = kalendarHeaderKonfig,
+        headerConfig = headerConfig,
         calendarIconEnabled = calendarIconEnabled
     )
 }
@@ -92,30 +92,30 @@ fun KalendarHeader(
     showCalendarIcon: Boolean = false,
     calendarIconEnabled: Boolean = false,
     canNavigateBack: Boolean = true,
-    arrowShown: Boolean = true,
-    kalendarHeaderKonfig: KalendarHeaderKonfig = KalendarHeaderKonfig.default(),
+    showArrows: Boolean = true,
+    headerConfig: KalendarHeaderConfig = KalendarHeaderConfig.default(),
     onPreviousClick: () -> Unit = {},
     onNextClick: () -> Unit = {},
     onNavigateToday: () -> Unit = {},
 ) {
     KalendarHeaderContent(
         modifier = modifier.defaultMinSize(minHeight = 56.dp),
-        kalendarHeaderKonfig = kalendarHeaderKonfig,
+        headerConfig = headerConfig,
         titleText = title,
         canNavigateBack = canNavigateBack,
         calendarIconEnabled = calendarIconEnabled,
-        arrowShown = arrowShown,
+        showArrows = showArrows,
         onPreviousClick = onPreviousClick,
         showCalendarIcon = showCalendarIcon,
         onNextClick = onNextClick,
         onNavigateToday = onNavigateToday,
-        centerAligned = kalendarHeaderKonfig.centerAligned
+        centerAligned = headerConfig.centerAligned
     )
 }
 
 @Composable
 private fun KalendarHeaderContent(
-    arrowShown: Boolean,
+    showArrows: Boolean,
     titleText: String,
     onPreviousClick: () -> Unit,
     onNextClick: () -> Unit,
@@ -125,7 +125,7 @@ private fun KalendarHeaderContent(
     calendarIconEnabled: Boolean,
     centerAligned: Boolean,
     modifier: Modifier = Modifier,
-    kalendarHeaderKonfig: KalendarHeaderKonfig = KalendarHeaderKonfig.default(),
+    headerConfig: KalendarHeaderConfig = KalendarHeaderConfig.default(),
 ) {
     var isNext by rememberSaveable { mutableStateOf(true) }
     val paddingModifier = if (centerAligned) {
@@ -141,7 +141,7 @@ private fun KalendarHeaderContent(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        if (arrowShown && centerAligned) {
+        if (showArrows && centerAligned) {
             KalendarIconButton(
                 modifier = Modifier.wrapContentSize(),
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
@@ -167,7 +167,7 @@ private fun KalendarHeaderContent(
                     .wrapContentSize()
                     .align(Alignment.CenterVertically),
                 text = month,
-                style = kalendarHeaderKonfig.textStyle,
+                style = headerConfig.textStyle,
             )
         }
         if (showCalendarIcon) {
@@ -181,7 +181,7 @@ private fun KalendarHeaderContent(
                 }
             )
         }
-        if (arrowShown) {
+        if (showArrows) {
             Row {
                 if (!centerAligned) {
                     KalendarIconButton(

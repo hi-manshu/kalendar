@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright 2025 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
+ *  * Copyright 2026 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
  *  * Licensed under the Apache License, Version 2.0 (the "License");
  *  * you may not use this file except in compliance with the License.
  *  * You may obtain a copy of the License at
@@ -19,20 +19,20 @@ package com.himanshoe.kalendar.foundation.color
 import androidx.compose.ui.graphics.Color
 
 /**
- * A sealed class representing different types of chart colors.
+ * A sealed class representing different types of colors.
  *
- * @property value A list of colors used for the chart.
+ * @property value A list of colors used for the color representation.
  */
 sealed class KalendarColor(open val value: List<Color> = emptyList()) {
     /**
-     * A data class representing a solid color for the chart.
+     * A data class representing a solid color.
      *
      * @property color The solid color.
      */
     data class Solid(val color: Color) : KalendarColor(listOf(color, color))
 
     /**
-     * A data class representing a gradient color for the chart.
+     * A data class representing a gradient color.
      *
      * @property value A list of colors used for the gradient.
      */
@@ -40,15 +40,15 @@ sealed class KalendarColor(open val value: List<Color> = emptyList()) {
 }
 
 /**
- * Extension function to convert a Color to a Solid ChartColor.
+ * Extension function to convert a Color to a Solid KalendarColor.
  *
- * @return A Solid ChartColor with the given color.
+ * @return A Solid KalendarColor with the given color.
  */
-fun Color.asSolidChartColor() = KalendarColor.Solid(this)
+fun Color.asSolidColor() = KalendarColor.Solid(this)
 
 /**
- * Extension function to convert a list of Colors to a Gradient ChartColor.
+ * Extension function to convert a list of Colors to a Gradient KalendarColor.
  *
- * @return A Gradient ChartColor with the given list of colors.
+ * @return A Gradient KalendarColor with the given list of colors.
  */
-fun List<Color>.asGradientChartColor() = KalendarColor.Gradient(this)
+fun List<Color>.asGradientColor() = KalendarColor.Gradient(this)

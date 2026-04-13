@@ -1,0 +1,104 @@
+/*
+ *
+ *  * Copyright 2026 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
+ *  * Licensed under the Apache License, Version 2.0 (the "License");
+ *  * you may not use this file except in compliance with the License.
+ *  * You may obtain a copy of the License at
+ *  * http://www.apache.org/licenses/LICENSE-2.0
+ *  * Unless required by applicable law or agreed to in writing, software
+ *  * distributed under the License is distributed on an "AS IS" BASIS,
+ *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  * See the License for the specific language governing permissions and
+ *  * limitations under the License.
+ *  *
+ *
+ */
+
+package com.himanshoe.kalendar.sync
+
+/**
+ * Returns the success value, or `null` for any non-success result.
+ *
+ * ```kotlin
+ * val events = sync.fetchEvents(start, end).getOrNull() ?: return
+ * ```
+ */
+fun <T> KalendarSyncResult<T>.getOrNull(): T? =
+    (this as? KalendarSyncResult.Success)?.data
+
+/**
+ * Returns the success value, or throws an exception for any non-success result.
+ *
+ * - [KalendarSyncResult.Error] — throws [cause] if present, otherwise a [RuntimeException]
+ *   with [KalendarSyncResult.Error.message].
+ * - [KalendarSyncResult.PermissionDenied] — throws [SecurityException].
+ * - [KalendarSyncResult.NotSupported] — throws [UnsupportedOperationException].
+ *
+ * ```kotlin
+ * val events = sync.fetchEvents(start, end).getOrThrow()
+ * ```
+ */
+fun <T> KalendarSyncResult<T>.getOrThrow(): T = when (this) {
+    is KalendarSyncResult.Success -> data
+    is KalendarSyncResult.Error -> throw cause ?: RuntimeException(message)
+    KalendarSyncResult.PermissionDenied -> throw SecurityException("Calendar permission denied")
+    KalendarSyncResult.NotSupported -> throw UnsupportedOperationException(
+        "Device calendar access is not supported on this platform"
+    )
+}
+
+/**
+ * Invokes [action] with the success value when this result is [KalendarSyncResult.Success],
+ * then returns `this` unchanged for chaining.
+ *
+ * ```kotlin
+ * sync.fetchEvents(start, end)
+ *     .onSuccess { events -> showEvents(events) }
+ *     .onError { message, _ -> showError(message) }
+ * ```
+ */
+inline fun <T> KalendarSyncResult<T>.onSuccess(
+    action: (data: T) -> Unit,
+): KalendarSyncResult<T> {
+    if (this is KalendarSyncResult.Success) action(data)
+    return this
+}
+
+/**
+ * Invokes [action] with the error message and optional cause when this result is
+ * [KalendarSyncResult.Error], then returns `this` unchanged for chaining.
+ */
+inline fun <T> KalendarSyncResult<T>.onError(
+    action: (message: String, cause: Throwable?) -> Unit,
+): KalendarSyncResult<T> {
+    if (this is KalendarSyncResult.Error) action(message, cause)
+    return this
+}
+
+/**
+ * Invokes [action] when this result is [KalendarSyncResult.PermissionDenied],
+ * then returns `this` unchanged for chaining.
+ *
+ * ```kotlin
+ * sync.insertEvent(event)
+ *     .onPermissionDenied { requestCalendarPermission() }
+ *     .onSuccess { id -> showConfirmation(id) }
+ * ```
+ */
+inline fun <T> KalendarSyncResult<T>.onPermissionDenied(
+    action: () -> Unit,
+): KalendarSyncResult<T> {
+    if (this === KalendarSyncResult.PermissionDenied) action()
+    return this
+}
+
+/**
+ * Invokes [action] when this result is [KalendarSyncResult.NotSupported],
+ * then returns `this` unchanged for chaining.
+ */
+inline fun <T> KalendarSyncResult<T>.onNotSupported(
+    action: () -> Unit,
+): KalendarSyncResult<T> {
+    if (this === KalendarSyncResult.NotSupported) action()
+    return this
+}

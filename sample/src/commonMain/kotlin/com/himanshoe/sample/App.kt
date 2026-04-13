@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright 2025 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
+ *  * Copyright 2026 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
  *  * Licensed under the Apache License, Version 2.0 (the "License");
  *  * you may not use this file except in compliance with the License.
  *  * You may obtain a copy of the License at
@@ -19,22 +19,18 @@ package com.himanshoe.sample
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import com.himanshoe.kalendar.Kalendar
 import com.himanshoe.kalendar.KalendarType
 import com.himanshoe.kalendar.foundation.action.OnDaySelectionAction
+import com.himanshoe.kalendar.foundation.component.config.KalendarConfig
 import com.himanshoe.kalendar.foundation.event.KalendarEvents
-import com.himanshoe.kalendar.foundation.event.KalenderEvent
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DayOfWeek
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 
@@ -44,12 +40,14 @@ fun App() {
         Kalendar(
             selectedDate = Clock.System.todayIn(TimeZone.currentSystemDefault()),
             modifier = Modifier.fillMaxWidth(),
-            events = KalendarEvents(),
-            startDayOfWeek = DayOfWeek.SUNDAY,
-            kalendarType = KalendarType.Aerial,
+            events = emptyList(),
+            type = KalendarType.Aerial,
             onDaySelectionAction = OnDaySelectionAction.Multiple { date, events ->
                 println("Selected Date: $date with events: $events")
             },
+            config = KalendarConfig(
+                startDayOfWeek = DayOfWeek.MONDAY
+            ),
         )
     }
 }

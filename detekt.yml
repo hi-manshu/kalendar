@@ -1,0 +1,129 @@
+# Root Detekt configuration — shared across all KalendarLib modules.
+# Applied via --build-upon-default-config so only overrides are listed here.
+
+complexity:
+  LongParameterList:
+    active: true
+    functionThreshold: 10        # Composable functions legitimately have many params
+    constructorThreshold: 8
+    ignoreDefaultParameters: true
+    ignoreAnnotated: [ "Composable" ]
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 20
+    thresholdInClasses: 15
+    thresholdInInterfaces: 10
+    thresholdInObjects: 10
+    thresholdInEnums: 5
+    ignorePrivate: true
+    ignoreAnnotated: [ "Composable" ]
+  LongMethod:
+    active: true
+    threshold: 80
+    ignoreAnnotated: [ "Composable" ]
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 15
+    ignoreAnnotated: [ "Composable" ]
+  ComplexCondition:
+    active: true
+    threshold: 4
+  NestedBlockDepth:
+    active: true
+    threshold: 5
+
+naming:
+  MatchingDeclarationName:
+    active: false  # Library files legitimately contain multiple related declarations
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][_A-Za-z0-9]*'
+  FunctionNaming:
+    active: true
+    functionPattern: '^[a-z][A-Za-z0-9]*$'
+    ignoreAnnotated: [ "Composable" ]
+  ClassNaming:
+    active: true
+    classPattern: '[A-Z][A-Za-z0-9]*'
+  VariableNaming:
+    active: true
+    variablePattern: '[a-z][A-Za-z0-9]*'
+
+formatting:
+  Indentation:
+    active: false
+  TrailingCommaOnCallSite:
+    active: false
+  TrailingCommaOnDeclarationSite:
+    active: false
+  Filename:
+    active: false  # Kotlin allows multi-declaration files; not enforced in this codebase
+  MaximumLineLength:
+    active: true
+    maxLineLength: 140
+    ignoreImports: true
+
+style:
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+    excludeImportStatements: true
+  MagicNumber:
+    active: true
+    ignoreNumbers: [ '-1', '0', '1', '2', '3', '4', '6', '7', '12', '16', '24', '32', '100' ]
+    ignoreConstantDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreNamedArgument: true
+    ignoreAnnotated: [ "Composable" ]
+  DestructuringDeclarationWithTooManyEntries:
+    active: true
+    maxDestructuringEntries: 3
+  UnusedImports:
+    active: true
+  WildcardImport:
+    active: true
+    excludeImports:
+      - 'kotlinx.coroutines.*'
+  ForbiddenComment:
+    active: true
+    comments:
+      - reason: 'Resolve FIXMEs before merging'
+        value: 'FIXME:'
+  OptionalUnit:
+    active: true
+  ReturnCount:
+    active: true
+    max: 4
+
+potential-bugs:
+  AvoidReferentialEquality:
+    active: true
+  NullableToStringCall:
+    active: true
+  UnreachableCode:
+    active: true
+  UnsafeCast:
+    active: true
+  ExplicitGarbageCollectionCall:
+    active: true
+  LateinitUsage:
+    active: true
+
+performance:
+  ArrayPrimitive:
+    active: true
+  ForEachOnRange:
+    active: true
+  SpreadOperator:
+    active: true
+  UnnecessaryTemporaryInstantiation:
+    active: true
+
+coroutines:
+  GlobalCoroutineUsage:
+    active: true
+  RedundantSuspendModifier:
+    active: true
+  SleepInsteadOfDelay:
+    active: true
+  SuspendFunWithCoroutineScopeReceiver:
+    active: true

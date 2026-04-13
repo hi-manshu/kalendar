@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright 2025 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
+ *  * Copyright 2026 Kalendar Contributors (https://www.himanshoe.com). All rights reserved.
  *  * Licensed under the Apache License, Version 2.0 (the "License");
  *  * you may not use this file except in compliance with the License.
  *  * You may obtain a copy of the License at
@@ -24,15 +24,36 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.himanshoe.kalendar.foundation.component.config.KalendarDayLabelKonfig
+import com.himanshoe.kalendar.foundation.component.config.KalendarDayLabelConfig
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 
+/**
+ * The structural backbone of every Kalendar layout variant.
+ *
+ * Renders an optional row of day-of-week column headers followed by the date cells provided
+ * by [content]. The grid is always 7 columns wide.
+ *
+ * @param showDayLabel When `true` a row of abbreviated day-of-week labels is rendered above
+ *   the date grid (e.g. "Mo", "Tu", "We", …). Defaults to `true`.
+ * @param dayOfWeek A lambda that returns the ordered list of [DayOfWeek] values to use as
+ *   column headers. The order should match the [com.himanshoe.kalendar.foundation.component.config.KalendarConfig.startDayOfWeek]
+ *   setting of the parent calendar.
+ * @param dayLabelConfig Visual and locale configuration for the day-of-week label row.
+ *   Supply a [com.himanshoe.kalendar.foundation.component.config.KalendarDayLabelConfig.dayNameFormatter]
+ *   to enable locale-aware label text.
+ * @param modifier [Modifier] applied to the [LazyVerticalGrid] container.
+ * @param dates A lambda that returns the list of [LocalDate] values to render. The list
+ *   typically includes padding dates from the previous or next month to fill the first and
+ *   last rows of the grid.
+ * @param content The composable slot called once per date. Implementations are responsible
+ *   for handling padding dates (dates outside the current month) appropriately.
+ */
 @Composable
 fun KalendarScaffold(
     showDayLabel: Boolean,
     dayOfWeek: () -> List<DayOfWeek>,
-    kalendarDayLabelKonfig: KalendarDayLabelKonfig,
+    dayLabelConfig: KalendarDayLabelConfig,
     modifier: Modifier = Modifier,
     dates: () -> List<LocalDate>,
     content: @Composable (LocalDate) -> Unit,
@@ -46,15 +67,17 @@ fun KalendarScaffold(
         horizontalArrangement = Arrangement.Center,
         content = {
             if (showDayLabel) {
-                items(displayDayOfWeek) { dayOfWeek ->
+                items(displayDayOfWeek) { day ->
+                    val label = dayLabelConfig.dayNameFormatter?.invoke(day)
+                        ?: day.name.take(dayLabelConfig.textCharCount)
                     Text(
-                        text = dayOfWeek.name.take(kalendarDayLabelKonfig.textCharCount),
+                        text = label,
                         modifier = Modifier.fillMaxWidth(),
-                        style = kalendarDayLabelKonfig.textStyle
+                        style = dayLabelConfig.textStyle
                     )
                 }
             }
-            items(items = displayDates) { date ->
+            items(items = displayDates, key = { it.toEpochDays() }) { date ->
                 content(date)
             }
         }
