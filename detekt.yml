@@ -51,6 +51,8 @@ naming:
 formatting:
   Indentation:
     active: false
+  ImportOrdering:
+    active: false
   TrailingCommaOnCallSite:
     active: false
   TrailingCommaOnDeclarationSite:

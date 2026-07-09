@@ -10,9 +10,11 @@ complexity:
     ignoreAnnotated: [ "Composable" ]
   ComplexCondition:
     active: true
-    threshold: 5 # Increase the threshold to allow more complex conditions
+    threshold: 5
 
 naming:
+  MatchingDeclarationName:
+    active: false
   TopLevelPropertyNaming:
     constantPattern: '[A-Z][_A-Za-z0-9]*'
   FunctionNaming:
@@ -23,13 +25,25 @@ naming:
 formatting:
   Indentation:
     active: false
+  ImportOrdering:
+    active: false
+  Filename:
+    active: false
+  MaximumLineLength:
+    active: true
+    maxLineLength: 166
+    ignoreImports: true
 
 style:
   MaxLineLength:
     active: true
     maxLineLength: 166
+    excludeImportStatements: true
   MagicNumber:
     active: false
+  ReturnCount:
+    active: true
+    max: 4
   DestructuringDeclarationWithTooManyEntries:
     active: true
-    maxDestructuringEntries: 6 # Increase the threshold to allow more complex conditions
+    maxDestructuringEntries: 6

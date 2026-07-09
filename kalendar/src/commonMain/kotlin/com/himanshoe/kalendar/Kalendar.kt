@@ -60,8 +60,10 @@ import kotlinx.datetime.todayIn
  *   via [rememberKalendarController] and call [KalendarController.scrollToDate] to navigate
  *   without user interaction.
  * @param dayContent An optional composable slot that completely replaces the built-in day
- *   cell. Receives the [LocalDate], whether it is currently selected, and the events on that
- *   date. Not available for [KalendarType.Agenda].
+ *   cell. Receives the [LocalDate], whether it is currently selected, the events on that
+ *   date, and whether the day is disabled / non-interactable. Hosts must honour
+ *   [isDisabled] (e.g. pass it to [com.himanshoe.kalendar.foundation.component.KalendarDay]).
+ *   Not available for [KalendarType.Agenda].
  */
 @Composable
 fun Kalendar(
@@ -72,7 +74,7 @@ fun Kalendar(
     onDaySelectionAction: OnDaySelectionAction = OnDaySelectionAction.NoOp,
     config: KalendarConfig = KalendarConfig(),
     controller: KalendarController? = null,
-    dayContent: (@Composable (date: LocalDate, isSelected: Boolean, events: List<KalendarEvent>) -> Unit)? = null,
+    dayContent: (@Composable (LocalDate, Boolean, List<KalendarEvent>, Boolean) -> Unit)? = null,
 ) {
     when (type) {
         KalendarType.Oceanic -> KalendarOceanic(
@@ -116,6 +118,16 @@ fun Kalendar(
         )
 
         KalendarType.Yearly -> KalendarYearly(
+            selectedDate = selectedDate,
+            modifier = modifier,
+            onDaySelectionAction = onDaySelectionAction,
+            config = config,
+            events = events,
+            controller = controller,
+            dayContent = dayContent,
+        )
+
+        KalendarType.Season -> KalendarSeason(
             selectedDate = selectedDate,
             modifier = modifier,
             onDaySelectionAction = onDaySelectionAction,

@@ -68,33 +68,35 @@ private class AndroidKalendarSync(private val context: Context) : KalendarSyncPr
                 val startMillis = startDate.atStartOfDayIn(tz).toEpochMilliseconds()
                 val endMillis = endDate.atStartOfDayIn(tz).toEpochMilliseconds() + DAY_MILLIS - 1
 
+                // Use Instances so recurring and multi-day events overlapping the window appear
+                val builder = CalendarContract.Instances.CONTENT_URI.buildUpon()
+                ContentUris.appendId(builder, startMillis)
+                ContentUris.appendId(builder, endMillis)
+                val uri = builder.build()
+
                 val projection = arrayOf(
-                    CalendarContract.Events._ID,
-                    CalendarContract.Events.TITLE,
-                    CalendarContract.Events.DESCRIPTION,
-                    CalendarContract.Events.DTSTART,
-                    CalendarContract.Events.DTEND,
-                    CalendarContract.Events.ALL_DAY,
+                    CalendarContract.Instances.EVENT_ID,
+                    CalendarContract.Instances.TITLE,
+                    CalendarContract.Instances.DESCRIPTION,
+                    CalendarContract.Instances.BEGIN,
+                    CalendarContract.Instances.END,
+                    CalendarContract.Instances.ALL_DAY,
                 )
-                val selection =
-                    "${CalendarContract.Events.DTSTART} >= ? AND ${CalendarContract.Events.DTSTART} <= ? " +
-                        "AND ${CalendarContract.Events.DELETED} != 1"
-                val selectionArgs = arrayOf(startMillis.toString(), endMillis.toString())
 
                 val events = mutableListOf<KalendarSyncEvent>()
                 context.contentResolver.query(
-                    CalendarContract.Events.CONTENT_URI,
+                    uri,
                     projection,
-                    selection,
-                    selectionArgs,
-                    "${CalendarContract.Events.DTSTART} ASC",
+                    null,
+                    null,
+                    "${CalendarContract.Instances.BEGIN} ASC",
                 )?.use { cursor ->
-                    val idIdx = cursor.getColumnIndex(CalendarContract.Events._ID)
-                    val titleIdx = cursor.getColumnIndex(CalendarContract.Events.TITLE)
-                    val descIdx = cursor.getColumnIndex(CalendarContract.Events.DESCRIPTION)
-                    val startIdx = cursor.getColumnIndex(CalendarContract.Events.DTSTART)
-                    val endIdx = cursor.getColumnIndex(CalendarContract.Events.DTEND)
-                    val allDayIdx = cursor.getColumnIndex(CalendarContract.Events.ALL_DAY)
+                    val idIdx = cursor.getColumnIndex(CalendarContract.Instances.EVENT_ID)
+                    val titleIdx = cursor.getColumnIndex(CalendarContract.Instances.TITLE)
+                    val descIdx = cursor.getColumnIndex(CalendarContract.Instances.DESCRIPTION)
+                    val startIdx = cursor.getColumnIndex(CalendarContract.Instances.BEGIN)
+                    val endIdx = cursor.getColumnIndex(CalendarContract.Instances.END)
+                    val allDayIdx = cursor.getColumnIndex(CalendarContract.Instances.ALL_DAY)
 
                     while (cursor.moveToNext()) {
                         val allDay = cursor.getInt(allDayIdx) != 0

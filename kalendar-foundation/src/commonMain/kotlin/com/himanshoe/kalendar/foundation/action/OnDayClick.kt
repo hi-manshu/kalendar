@@ -19,6 +19,18 @@ package com.himanshoe.kalendar.foundation.action
 import com.himanshoe.kalendar.foundation.event.KalendarEvent
 import kotlinx.datetime.LocalDate
 
+/**
+ * Handles a day tap for [onDaySelectionAction], updating selection state via the provided
+ * callbacks.
+ *
+ * Non-allowed dates (see [isDateAllowed]) are ignored: no state change and no host callback.
+ * For [OnDaySelectionAction.Range], completing a range that contains any disallowed day is
+ * refused (policy: refuse incomplete booking ranges).
+ *
+ * @param isDateAllowed Predicate for whether a date may be selected. Defaults to always true
+ *   for backward-compatible call sites; production UIs should pass
+ *   [LocalDate.isDateInteractable].
+ */
 fun LocalDate.onDayClick(
     events: List<KalendarEvent>,
     rangeStartDate: LocalDate?,
@@ -29,7 +41,11 @@ fun LocalDate.onDayClick(
     onClickedRangeStartDate: (LocalDate?) -> Unit,
     onClickedRangeEndDate: (LocalDate?) -> Unit,
     onUpdateSelectedRange: (KalendarSelectedDayRange?) -> Unit,
+    allEvents: List<KalendarEvent> = events,
+    isDateAllowed: (LocalDate) -> Boolean = { true },
 ) {
+    if (!isDateAllowed(this)) return
+
     when (onDaySelectionAction) {
         is OnDaySelectionAction.Single -> {
             onClickedNewDate(this)
@@ -40,6 +56,8 @@ fun LocalDate.onDayClick(
             if (rangeStartDate == null || rangeEndDate != null) {
                 onClickedRangeStartDate(this)
                 onClickedRangeEndDate(null)
+                onUpdateSelectedRange(null)
+                onClickedNewDate(this)
             } else {
                 var newRangeStartDate = rangeStartDate
                 var newRangeEndDate = this
@@ -48,6 +66,9 @@ fun LocalDate.onDayClick(
                     newRangeStartDate = newRangeEndDate
                     newRangeEndDate = temp
                 }
+                if (!isRangeFullyAllowed(newRangeStartDate, newRangeEndDate, isDateAllowed)) {
+                    return
+                }
                 onClickedRangeStartDate(newRangeStartDate)
                 onClickedRangeEndDate(newRangeEndDate)
                 val range = KalendarSelectedDayRange(
@@ -55,9 +76,10 @@ fun LocalDate.onDayClick(
                     endInclusive = newRangeEndDate,
                 )
                 onUpdateSelectedRange(range)
-                onDaySelectionAction.onRangeSelected(range, events)
+                val eventsInRange = allEvents.filter { it.date in range }
+                onDaySelectionAction.onRangeSelected(range, eventsInRange)
+                onClickedNewDate(this)
             }
-            onClickedNewDate(this)
         }
 
         is OnDaySelectionAction.Multiple -> {

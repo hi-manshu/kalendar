@@ -26,9 +26,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -39,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,7 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.fastMap
+import com.himanshoe.kalendar.foundation.action.KalendarSelectedDayRange
 import com.himanshoe.kalendar.foundation.action.OnDaySelectionAction
 import com.himanshoe.kalendar.foundation.action.onDayClick
 import com.himanshoe.kalendar.foundation.component.config.KalendarConfig
@@ -63,14 +61,12 @@ import com.himanshoe.kalendar.foundation.component.config.KalendarHeaderConfig
 import com.himanshoe.kalendar.foundation.event.KalendarEvents
 import com.himanshoe.kalendar.foundation.event.KalendarEvent
 import kotlinx.datetime.Clock
-import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.minus
-import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
+import com.himanshoe.kalendar.foundation.action.isDateInteractable
 
 @Composable
 internal fun KalendarYearly(
@@ -80,7 +76,7 @@ internal fun KalendarYearly(
     modifier: Modifier = Modifier,
     controller: KalendarController? = null,
     onDaySelectionAction: OnDaySelectionAction = OnDaySelectionAction.NoOp,
-    dayContent: (@Composable (date: LocalDate, isSelected: Boolean, events: List<KalendarEvent>) -> Unit)? = null,
+    dayContent: (@Composable (LocalDate, Boolean, List<KalendarEvent>, Boolean) -> Unit)? = null,
 ) {
     KalendarYearlyContent(
         selectedDate = selectedDate,
@@ -101,17 +97,35 @@ private fun KalendarYearlyContent(
     config: KalendarConfig,
     modifier: Modifier = Modifier,
     controller: KalendarController? = null,
-    dayContent: (@Composable (date: LocalDate, isSelected: Boolean, events: List<KalendarEvent>) -> Unit)? = null,
+    dayContent: (@Composable (LocalDate, Boolean, List<KalendarEvent>, Boolean) -> Unit)? = null,
 ) {
     val startDayOfWeek = config.startDayOfWeek
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
     val initialDate = config.firstVisibleDate ?: selectedDate
     var currentYear by remember { mutableStateOf(initialDate.year) }
     var clickedDate by remember { mutableStateOf(selectedDate) }
+    var clickedNewDates by remember { mutableStateOf(config.initialSelectedDates) }
+    val selectedRange = remember {
+        mutableStateOf<KalendarSelectedDayRange?>(config.initialSelectedRange)
+    }
+    var rangeStartDate by remember {
+        mutableStateOf<LocalDate?>(config.initialSelectedRange?.start)
+    }
+    var rangeEndDate by remember {
+        mutableStateOf<LocalDate?>(config.initialSelectedRange?.endInclusive)
+    }
     val eventsByDate = remember(events) { events.groupBy { it.date } }
+    LaunchedEffect(selectedDate) { clickedDate = selectedDate }
 
     val canGoBack = config.minDate?.let { currentYear > it.year } ?: true
     val canGoForward = config.maxDate?.let { currentYear < it.year } ?: true
+
+    DisposableEffect(controller) {
+        val generation = controller?.attachScrollImpl { date ->
+            currentYear = date.year
+        }
+        onDispose { generation?.let { controller?.detachScrollImpl(it) } }
+    }
 
     LaunchedEffect(currentYear) {
         val start = LocalDate(currentYear, Month.JANUARY, 1)
@@ -142,22 +156,34 @@ private fun KalendarYearlyContent(
                     month = month,
                     today = today,
                     selectedDate = clickedDate,
+                    selectedDates = when (onDaySelectionAction) {
+                        is OnDaySelectionAction.Multiple -> clickedNewDates
+                        else -> emptyList()
+                    },
+                    selectedRange = selectedRange.value,
                     startDayOfWeek = startDayOfWeek,
                     eventsByDate = eventsByDate,
                     config = config,
                     dayContent = dayContent,
+                    onDaySelectionAction = onDaySelectionAction,
                     onDayClick = { date ->
                         val dateEvents = eventsByDate[date] ?: emptyList()
                         date.onDayClick(
                             events = dateEvents,
-                            rangeStartDate = null,
-                            rangeEndDate = null,
+                            allEvents = events,
+                            rangeStartDate = rangeStartDate,
+                            rangeEndDate = rangeEndDate,
                             onDaySelectionAction = onDaySelectionAction,
                             onClickedNewDate = { clickedDate = it },
-                            onMultipleClickedNewDate = { clickedDate = it },
-                            onClickedRangeStartDate = {},
-                            onClickedRangeEndDate = {},
-                            onUpdateSelectedRange = {},
+                            onMultipleClickedNewDate = { d ->
+                                clickedNewDates = clickedNewDates.toMutableList().apply {
+                                    if (contains(d)) remove(d) else add(d)
+                                }
+                            },
+                            onClickedRangeStartDate = { rangeStartDate = it },
+                            onClickedRangeEndDate = { rangeEndDate = it },
+                            onUpdateSelectedRange = { selectedRange.value = it },
+                            isDateAllowed = { it.isDateInteractable(config) },
                         )
                     },
                 )
@@ -208,11 +234,14 @@ private fun MiniMonthGrid(
     month: Month,
     today: LocalDate,
     selectedDate: LocalDate,
+    selectedDates: List<LocalDate>,
+    selectedRange: KalendarSelectedDayRange?,
     startDayOfWeek: DayOfWeek,
     eventsByDate: Map<LocalDate, List<KalendarEvent>>,
     config: KalendarConfig,
+    onDaySelectionAction: OnDaySelectionAction,
     onDayClick: (LocalDate) -> Unit,
-    dayContent: (@Composable (date: LocalDate, isSelected: Boolean, events: List<KalendarEvent>) -> Unit)?,
+    dayContent: (@Composable (LocalDate, Boolean, List<KalendarEvent>, Boolean) -> Unit)?,
 ) {
     val firstOfMonth = LocalDate(year, month, 1)
     val dates = getMonthDates(firstOfMonth, startDayOfWeek)
@@ -231,57 +260,66 @@ private fun MiniMonthGrid(
             style = TextStyle(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
-                brush = Brush.linearGradient(config.headerConfig.textStyle.brush?.let {
+                brush = Brush.linearGradient(
                     listOf(Color(0xFF413D4B), Color(0xFFD8A29E))
-                } ?: listOf(Color(0xFF413D4B), Color(0xFFD8A29E))),
+                ),
             ),
             modifier = Modifier.padding(bottom = 4.dp),
         )
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(7),
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            userScrollEnabled = false,
-            horizontalArrangement = Arrangement.Center,
-            content = {
-                items(daysOfWeek) { day ->
-                    val label = config.dayLabelConfig.dayNameFormatter?.invoke(day)
-                        ?: day.name.take(1)
-                    Text(
-                        text = label,
-                        style = TextStyle(
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center,
-                            color = Color(0xFF613D4B),
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                items(items = dates, key = { it.toEpochDays() }) { date ->
-                    if (date.month == month) {
-                        val isSelected = date == selectedDate
-                        val isToday = date == today
-                        val isDisabled = config.disabledDates(date)
-                        val dateEvents = eventsByDate[date] ?: emptyList()
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            daysOfWeek.forEach { day ->
+                val label = config.dayLabelConfig.dayNameFormatter?.invoke(day)
+                    ?: day.name.take(1)
+                Text(
+                    text = label,
+                    style = TextStyle(
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        color = Color(0xFF613D4B),
+                    ),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+        dates.chunked(7).forEach { week ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                week.forEach { date ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (date.month == month && date.year == year) {
+                            val isSelected = when (onDaySelectionAction) {
+                                is OnDaySelectionAction.Multiple -> date in selectedDates
+                                is OnDaySelectionAction.Range ->
+                                    selectedRange?.let { date in it } == true || date == selectedDate
+                                else -> date == selectedDate
+                            }
+                            val isToday = date == today
+                            val isDisabled = !date.isDateInteractable(config, isPrimaryPeriod = true)
+                            val dateEvents = eventsByDate[date] ?: emptyList()
 
-                        if (dayContent != null) {
-                            dayContent(date, isSelected, dateEvents)
-                        } else {
-                            MiniDayCell(
-                                date = date,
-                                isSelected = isSelected,
-                                isToday = isToday,
-                                isDisabled = isDisabled,
-                                hasEvents = dateEvents.isNotEmpty(),
-                                onClick = { onDayClick(date) },
-                            )
+                            if (dayContent != null) {
+                                dayContent(date, isSelected, dateEvents, isDisabled)
+                            } else {
+                                MiniDayCell(
+                                    date = date,
+                                    isSelected = isSelected,
+                                    isToday = isToday,
+                                    isDisabled = isDisabled,
+                                    hasEvents = dateEvents.isNotEmpty(),
+                                    onClick = { onDayClick(date) },
+                                )
+                            }
                         }
-                    } else {
-                        Box(modifier = Modifier.aspectRatio(1f))
                     }
                 }
             }
-        )
+        }
     }
 }
 

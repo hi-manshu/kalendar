@@ -59,9 +59,12 @@ fun KalendarHeader(
     year: Int,
     modifier: Modifier = Modifier,
     canNavigateBack: Boolean = true,
+    canNavigateForward: Boolean = true,
     showCalendarIcon: Boolean = false,
     calendarIconEnabled: Boolean = false,
     showArrows: Boolean = true,
+    previousContentDescription: String = "Previous",
+    nextContentDescription: String = "Next",
     headerConfig: KalendarHeaderConfig = KalendarHeaderConfig.default(),
     onPreviousClick: () -> Unit = {},
     onNextClick: () -> Unit = {},
@@ -78,6 +81,9 @@ fun KalendarHeader(
         onNavigateToday = onNavigateToday,
         showCalendarIcon = showCalendarIcon,
         canNavigateBack = canNavigateBack,
+        canNavigateForward = canNavigateForward,
+        previousContentDescription = previousContentDescription,
+        nextContentDescription = nextContentDescription,
         centerAligned = headerConfig.centerAligned,
         modifier = modifier.defaultMinSize(minHeight = 56.dp),
         headerConfig = headerConfig,
@@ -92,7 +98,10 @@ fun KalendarHeader(
     showCalendarIcon: Boolean = false,
     calendarIconEnabled: Boolean = false,
     canNavigateBack: Boolean = true,
+    canNavigateForward: Boolean = true,
     showArrows: Boolean = true,
+    previousContentDescription: String = "Previous",
+    nextContentDescription: String = "Next",
     headerConfig: KalendarHeaderConfig = KalendarHeaderConfig.default(),
     onPreviousClick: () -> Unit = {},
     onNextClick: () -> Unit = {},
@@ -103,6 +112,9 @@ fun KalendarHeader(
         headerConfig = headerConfig,
         titleText = title,
         canNavigateBack = canNavigateBack,
+        canNavigateForward = canNavigateForward,
+        previousContentDescription = previousContentDescription,
+        nextContentDescription = nextContentDescription,
         calendarIconEnabled = calendarIconEnabled,
         showArrows = showArrows,
         onPreviousClick = onPreviousClick,
@@ -122,6 +134,9 @@ private fun KalendarHeaderContent(
     onNavigateToday: () -> Unit,
     showCalendarIcon: Boolean,
     canNavigateBack: Boolean,
+    canNavigateForward: Boolean,
+    previousContentDescription: String,
+    nextContentDescription: String,
     calendarIconEnabled: Boolean,
     centerAligned: Boolean,
     modifier: Modifier = Modifier,
@@ -145,7 +160,7 @@ private fun KalendarHeaderContent(
             KalendarIconButton(
                 modifier = Modifier.wrapContentSize(),
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                contentDescription = "Previous Month",
+                contentDescription = previousContentDescription,
                 enabled = canNavigateBack,
                 onClick = {
                     isNext = false
@@ -187,7 +202,7 @@ private fun KalendarHeaderContent(
                     KalendarIconButton(
                         modifier = Modifier.wrapContentSize(),
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Previous Month",
+                        contentDescription = previousContentDescription,
                         enabled = canNavigateBack,
                         onClick = {
                             isNext = false
@@ -198,12 +213,12 @@ private fun KalendarHeaderContent(
                 KalendarIconButton(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     modifier = Modifier.wrapContentSize(),
-                    contentDescription = "Next Month",
+                    contentDescription = nextContentDescription,
                     onClick = {
                         isNext = true
                         onNextClick()
                     },
-                    enabled = true
+                    enabled = canNavigateForward
                 )
             }
         }

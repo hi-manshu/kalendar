@@ -31,7 +31,7 @@ fun <T> KalendarSyncResult<T>.getOrNull(): T? =
  *
  * - [KalendarSyncResult.Error] — throws [cause] if present, otherwise a [RuntimeException]
  *   with [KalendarSyncResult.Error.message].
- * - [KalendarSyncResult.PermissionDenied] — throws [SecurityException].
+ * - [KalendarSyncResult.PermissionDenied] — throws [KalendarPermissionDeniedException].
  * - [KalendarSyncResult.NotSupported] — throws [UnsupportedOperationException].
  *
  * ```kotlin
@@ -41,7 +41,8 @@ fun <T> KalendarSyncResult<T>.getOrNull(): T? =
 fun <T> KalendarSyncResult<T>.getOrThrow(): T = when (this) {
     is KalendarSyncResult.Success -> data
     is KalendarSyncResult.Error -> throw cause ?: RuntimeException(message)
-    KalendarSyncResult.PermissionDenied -> throw SecurityException("Calendar permission denied")
+    KalendarSyncResult.PermissionDenied ->
+        throw KalendarPermissionDeniedException("Calendar permission denied")
     KalendarSyncResult.NotSupported -> throw UnsupportedOperationException(
         "Device calendar access is not supported on this platform"
     )

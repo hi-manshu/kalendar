@@ -26,6 +26,7 @@ package com.himanshoe.kalendar
  * | [Solaris] | Full month grid | Horizontal swipe |
  * | [Aerial] | Single week row | Horizontal swipe |
  * | [Yearly] | 12-month year overview | Arrow buttons |
+ * | [Season] | 3-month season overview | Arrow buttons |
  * | [Agenda] | Event list grouped by date | Scroll |
  */
 sealed interface KalendarType {
@@ -57,6 +58,14 @@ sealed interface KalendarType {
      * [onDaySelectionAction] and highlights the selected date.
      */
     data object Yearly : KalendarType
+
+    /**
+     * A season-overview calendar showing the three meteorological months of the current
+     * season (Spring / Summer / Autumn / Winter) with season-tinted chrome.
+     * Navigate between seasons with previous/next arrow buttons. Winter spans the
+     * December–February year boundary.
+     */
+    data object Season : KalendarType
 
     /**
      * An agenda-style calendar that renders a scrollable list of events grouped by date.

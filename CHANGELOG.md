@@ -8,6 +8,35 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **`KalendarType.Season`** — season-overview calendar showing the three meteorological months of
+  the current season (Spring / Summer / Autumn / Winter) with season-tinted chrome. Winter spans
+  the December–February year boundary. Includes public helpers `seasonPeriodOf`,
+  `KalendarSeasonPeriod`, and `KalendarSeason.defaultPalette()`.
+- **`LocalDate.isDateInteractable`** / **`isRangeFullyAllowed`** — shared selection policy for
+  disabled dates, min/max bounds, and non-primary (pad) days.
+- **`KalendarHeader.canNavigateForward`** — next-arrow enablement (mirrors `canNavigateBack`).
+
+### Changed
+- **`dayContent`** now receives a fourth argument `isDisabled: Boolean`. Hosts must honour it.
+- **`onDayClick`** ignores disallowed dates and refuses range completion when any day in the
+  range is disallowed.
+- **`onVisibleRangeChange`** (Oceanic/Solaris) reports the full rendered grid including pad days.
+- **`KalendarDay.selectedDate`** is nullable (`null` = no single-selection highlight).
+- Agenda supports **Range** selection and respects `disabledDates` / min / max.
+- Yearly mini-months require `date.year == year` (not only month).
+
+### Fixed
+- Next navigation arrow stayed enabled at `maxDate` (header always `enabled = true`).
+- Custom `dayContent` paths no longer silently drop disable state (library now passes `isDisabled`).
+
+### Sample / QA
+- Sample type switcher (Oceanic / Firey / Season / Agenda).
+- Oceanic demo: series days (blue) vs user selection (coral); past dates disabled.
+- Compose UI tests (desktop): past-date disable, maxDate next arrow, Monday-first pad day.
+- `KalendarDay` semantics: content description, testTag `kalendar-day-<date>`, selected/disabled.
+- CI runs on `feat/**` / `fix/**` / `ci/**`; wrapper validation; APK skips pure docs.
+
 ## [2.0.0-RC1] – 2026
 
 ### Breaking changes from 1.x

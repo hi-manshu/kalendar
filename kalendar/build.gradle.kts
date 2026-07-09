@@ -80,6 +80,13 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+            implementation(compose.uiTest)
+        }
+        named("desktopTest") {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+            }
         }
     }
 }

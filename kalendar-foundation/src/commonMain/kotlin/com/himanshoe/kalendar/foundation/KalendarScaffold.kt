@@ -17,13 +17,15 @@
 package com.himanshoe.kalendar.foundation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.himanshoe.kalendar.foundation.component.config.KalendarDayLabelConfig
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
@@ -34,6 +36,9 @@ import kotlinx.datetime.LocalDate
  * Renders an optional row of day-of-week column headers followed by the date cells provided
  * by [content]. The grid is always 7 columns wide.
  *
+ * Uses a non-lazy [Column]/[Row] grid so it measures correctly inside a parent [Column]
+ * without unbounded-height constraints (unlike [androidx.compose.foundation.lazy.grid.LazyVerticalGrid]).
+ *
  * @param showDayLabel When `true` a row of abbreviated day-of-week labels is rendered above
  *   the date grid (e.g. "Mo", "Tu", "We", …). Defaults to `true`.
  * @param dayOfWeek A lambda that returns the ordered list of [DayOfWeek] values to use as
@@ -42,7 +47,7 @@ import kotlinx.datetime.LocalDate
  * @param dayLabelConfig Visual and locale configuration for the day-of-week label row.
  *   Supply a [com.himanshoe.kalendar.foundation.component.config.KalendarDayLabelConfig.dayNameFormatter]
  *   to enable locale-aware label text.
- * @param modifier [Modifier] applied to the [LazyVerticalGrid] container.
+ * @param modifier [Modifier] applied to the grid container.
  * @param dates A lambda that returns the list of [LocalDate] values to render. The list
  *   typically includes padding dates from the previous or next month to fill the first and
  *   last rows of the grid.
@@ -61,25 +66,49 @@ fun KalendarScaffold(
     val displayDates = dates()
     val displayDayOfWeek = dayOfWeek()
 
-    LazyVerticalGrid(
-        modifier = modifier,
-        columns = GridCells.Fixed(7),
-        horizontalArrangement = Arrangement.Center,
-        content = {
-            if (showDayLabel) {
-                items(displayDayOfWeek) { day ->
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
+    ) {
+        if (showDayLabel) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                displayDayOfWeek.forEach { day ->
                     val label = dayLabelConfig.dayNameFormatter?.invoke(day)
                         ?: day.name.take(dayLabelConfig.textCharCount)
-                    Text(
-                        text = label,
-                        modifier = Modifier.fillMaxWidth(),
-                        style = dayLabelConfig.textStyle
-                    )
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = label,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = dayLabelConfig.textStyle,
+                        )
+                    }
                 }
             }
-            items(items = displayDates, key = { it.toEpochDays() }) { date ->
-                content(date)
+        }
+        displayDates.chunked(7).forEach { week ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                week.forEach { date ->
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        content(date)
+                    }
+                }
+                // Pad incomplete last row if any (defensive)
+                repeat(7 - week.size) {
+                    Box(modifier = Modifier.weight(1f))
+                }
             }
         }
-    )
+    }
 }

@@ -58,32 +58,55 @@ fun KalendarSyncEvent.expandOccurrences(
     val rule = recurrenceRule
         ?: return if (date in rangeStart..rangeEnd) listOf(this) else emptyList()
 
+    val interval = rule.interval.coerceAtLeast(1)
+    val safeRule = if (interval == rule.interval) rule else rule.copy(interval = interval)
+
     val occurrences = mutableListOf<KalendarSyncEvent>()
     var occurrenceCount = 0
     var current = date
+    val startEpoch = date.toEpochDays().toLong()
 
-    while (true) {
-        if (rule.count != null && occurrenceCount >= rule.count) break
-        if (rule.until != null && current > rule.until) break
+    // Guard against pathological rules that never advance
+    var safety = 0
+    val maxIterations = 100_000
+
+    while (safety++ < maxIterations) {
+        if (safeRule.until != null && current > safeRule.until) break
+        // Past the window: no further occurrences can fall in range
         if (current > rangeEnd) break
 
-        if (current >= rangeStart && current.matchesFilters(rule)) {
-            occurrences += copyWithDate(current)
+        if (current.matchesFilters(safeRule, startEpoch)) {
+            // COUNT includes occurrences before the expansion window
             occurrenceCount++
+            if (current >= rangeStart) {
+                occurrences += copyWithDate(current)
+            }
+            if (safeRule.count != null && occurrenceCount >= safeRule.count) break
         }
 
-        current = current.advance(rule)
+        val next = current.advance(safeRule)
+        if (next <= current) break
+        current = next
     }
     return occurrences
 }
 
 /**
- * Returns `true` if this date satisfies all BYMONTH, BYMONTHDAY, and BYDAY constraints in [rule].
+ * Returns `true` if this date satisfies all BYMONTH, BYMONTHDAY, and BYDAY constraints in [rule],
+ * including WEEKLY interval alignment from the recurrence start ([startEpochDays]).
  */
-private fun LocalDate.matchesFilters(rule: KalendarRule): Boolean {
+private fun LocalDate.matchesFilters(rule: KalendarRule, startEpochDays: Long): Boolean {
     if (rule.byMonth.isNotEmpty() && monthNumber !in rule.byMonth) return false
     if (rule.byMonthDay.isNotEmpty() && dayOfMonth !in rule.byMonthDay) return false
     if (rule.byDay.isNotEmpty() && dayOfWeek.toKalendarWeekDay() !in rule.byDay) return false
+    // WEEKLY + BYDAY must honour INTERVAL (week N from DTSTART where N % interval == 0)
+    if (rule.frequency == KalendarRecurrenceFrequency.WEEKLY &&
+        rule.byDay.isNotEmpty() &&
+        rule.interval > 1
+    ) {
+        val weeksFromStart = (toEpochDays() - startEpochDays) / 7
+        if (weeksFromStart < 0 || weeksFromStart % rule.interval != 0L) return false
+    }
     return true
 }
 
@@ -91,23 +114,26 @@ private fun LocalDate.matchesFilters(rule: KalendarRule): Boolean {
  * Returns the next candidate date after this one, based on [rule]'s frequency and BYDAY strategy.
  *
  * WEEKLY rules with a non-empty BYDAY filter advance one day at a time so that every qualifying
- * day within each week is tested. All other combinations advance by one full interval unit.
+ * day within each week is tested; [KalendarRule.interval] is applied via [matchesFilters].
+ * All other combinations advance by one full interval unit (minimum 1).
  */
-private fun LocalDate.advance(rule: KalendarRule): LocalDate =
-    when (rule.frequency) {
+private fun LocalDate.advance(rule: KalendarRule): LocalDate {
+    val interval = rule.interval.coerceAtLeast(1)
+    return when (rule.frequency) {
         KalendarRecurrenceFrequency.DAILY ->
-            plus(rule.interval, DateTimeUnit.DAY)
+            plus(interval, DateTimeUnit.DAY)
 
         KalendarRecurrenceFrequency.WEEKLY ->
-            if (rule.byDay.isEmpty()) plus(rule.interval * 7, DateTimeUnit.DAY)
+            if (rule.byDay.isEmpty()) plus(interval * 7, DateTimeUnit.DAY)
             else plus(1, DateTimeUnit.DAY)
 
         KalendarRecurrenceFrequency.MONTHLY ->
-            plus(rule.interval, DateTimeUnit.MONTH)
+            plus(interval, DateTimeUnit.MONTH)
 
         KalendarRecurrenceFrequency.YEARLY ->
-            plus(rule.interval, DateTimeUnit.YEAR)
+            plus(interval, DateTimeUnit.YEAR)
     }
+}
 
 /**
  * Maps a [DayOfWeek] to the corresponding [KalendarWeekDay] entry.

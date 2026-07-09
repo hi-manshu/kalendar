@@ -17,7 +17,6 @@
 package com.himanshoe.kalendar
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
@@ -33,6 +32,7 @@ import androidx.compose.ui.graphics.Brush
 import com.himanshoe.kalendar.foundation.KalendarScaffold
 import com.himanshoe.kalendar.foundation.action.KalendarSelectedDayRange
 import com.himanshoe.kalendar.foundation.action.OnDaySelectionAction
+import com.himanshoe.kalendar.foundation.action.isDateInteractable
 import com.himanshoe.kalendar.foundation.action.onDayClick
 import com.himanshoe.kalendar.foundation.component.KalendarDay
 import com.himanshoe.kalendar.foundation.component.KalendarHeader
@@ -53,7 +53,7 @@ internal fun KalendarOceanic(
     modifier: Modifier = Modifier,
     controller: KalendarController? = null,
     onDaySelectionAction: OnDaySelectionAction = OnDaySelectionAction.NoOp,
-    dayContent: (@Composable (date: LocalDate, isSelected: Boolean, events: List<KalendarEvent>) -> Unit)? = null,
+    dayContent: (@Composable (LocalDate, Boolean, List<KalendarEvent>, Boolean) -> Unit)? = null,
 ) {
     KalendarOceanicContent(
         selectedDate = selectedDate,
@@ -74,7 +74,7 @@ private fun KalendarOceanicContent(
     config: KalendarConfig,
     modifier: Modifier = Modifier,
     controller: KalendarController? = null,
-    dayContent: (@Composable (date: LocalDate, isSelected: Boolean, events: List<KalendarEvent>) -> Unit)? = null,
+    dayContent: (@Composable (LocalDate, Boolean, List<KalendarEvent>, Boolean) -> Unit)? = null,
 ) {
     val startDayOfWeek = config.startDayOfWeek
     val initialDate = config.firstVisibleDate ?: selectedDate
@@ -92,16 +92,20 @@ private fun KalendarOceanicContent(
     }
     var clickedNewDate by remember { mutableStateOf(selectedDate) }
     var clickedNewDates by remember {
-        mutableStateOf(
-            if (config.initialSelectedDates.isNotEmpty()) config.initialSelectedDates
-            else listOf(selectedDate)
-        )
+        mutableStateOf(config.initialSelectedDates)
+    }
+    LaunchedEffect(selectedDate) {
+        clickedNewDate = selectedDate
     }
     val daysOfWeek = DayOfWeek.entries.rotate(startDayOfWeek.ordinal)
     val displayDates by remember(currentMonth, startDayOfWeek) {
         mutableStateOf(getMonthDates(currentMonth, startDayOfWeek))
     }
     val eventsByDate = remember(events) { events.groupBy { it.date } }
+    val multiSelectDates = when (onDaySelectionAction) {
+        is OnDaySelectionAction.Multiple -> clickedNewDates
+        else -> emptyList()
+    }
 
     val canGoBack = config.minDate?.let { min ->
         currentMonth > min.minus(min.dayOfMonth - 1, DateTimeUnit.DAY)
@@ -111,17 +115,15 @@ private fun KalendarOceanicContent(
     } ?: true
 
     DisposableEffect(controller) {
-        controller?.attachScrollImpl { date ->
+        val generation = controller?.attachScrollImpl { date ->
             currentMonth = date.minus(date.dayOfMonth - 1, DateTimeUnit.DAY)
         }
-        onDispose { controller?.detachScrollImpl() }
+        onDispose { generation?.let { controller?.detachScrollImpl(it) } }
     }
 
-    LaunchedEffect(currentMonth) {
-        config.onVisibleRangeChange?.invoke(
-            currentMonth,
-            currentMonth.plus(1, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY)
-        )
+    LaunchedEffect(currentMonth, startDayOfWeek) {
+        val grid = getMonthDates(currentMonth, startDayOfWeek)
+        config.onVisibleRangeChange?.invoke(grid.first(), grid.last())
     }
 
     Column(
@@ -134,6 +136,9 @@ private fun KalendarOceanicContent(
             year = currentMonth.year,
             showArrows = config.showArrows,
             canNavigateBack = canGoBack,
+            canNavigateForward = canGoForward,
+            previousContentDescription = "Previous month",
+            nextContentDescription = "Next month",
             onPreviousClick = {
                 if (canGoBack) {
                     currentMonth = currentMonth.minus(1, DateTimeUnit.MONTH)
@@ -152,51 +157,105 @@ private fun KalendarOceanicContent(
             dayLabelConfig = config.dayLabelConfig,
             dates = { displayDates },
         ) { date ->
-            val isCurrentMonth = date.month == currentMonth.month
+            val isCurrentMonth =
+                date.year == currentMonth.year && date.month == currentMonth.month
             val dateEvents = eventsByDate[date] ?: emptyList()
+            val isDisabled = !date.isDateInteractable(config, isPrimaryPeriod = isCurrentMonth)
+            val isDateAllowed: (LocalDate) -> Boolean = { candidate ->
+                val primary =
+                    candidate.year == currentMonth.year && candidate.month == currentMonth.month
+                candidate.isDateInteractable(config, isPrimaryPeriod = primary)
+            }
             if (dayContent != null) {
-                val isSelected = date == clickedNewDate || clickedNewDates.contains(date)
-                dayContent(date, isSelected, dateEvents)
+                val isSelected = when (onDaySelectionAction) {
+                    is OnDaySelectionAction.Multiple -> date in multiSelectDates
+                    is OnDaySelectionAction.Range ->
+                        selectedRange.value?.let { date in it } == true || date == clickedNewDate
+                    else -> date == clickedNewDate
+                }
+                dayContent(date, isSelected, dateEvents, isDisabled)
             } else {
                 KalendarDay(
                     date = date,
                     selectedRange = selectedRange.value,
-                    selectedDates = clickedNewDates,
+                    selectedDates = multiSelectDates,
                     onDayClick = { clickedDate, clickedEvents: List<KalendarEvent> ->
                         clickedDate.onDayClick(
                             events = clickedEvents,
+                            allEvents = events,
                             rangeStartDate = rangeStartDate,
                             rangeEndDate = rangeEndDate,
                             onDaySelectionAction = onDaySelectionAction,
                             onClickedNewDate = { clickedNewDate = it },
-                            onMultipleClickedNewDate = { date ->
+                            onMultipleClickedNewDate = { tapped ->
                                 clickedNewDates = clickedNewDates.toMutableList().apply {
-                                    if (clickedNewDates.contains(date)) remove(date) else add(date)
+                                    if (contains(tapped)) remove(tapped) else add(tapped)
                                 }
                             },
                             onClickedRangeStartDate = { rangeStartDate = it },
                             onClickedRangeEndDate = { rangeEndDate = it },
                             onUpdateSelectedRange = { selectedRange.value = it },
+                            isDateAllowed = isDateAllowed,
                         )
                     },
                     dayConfig = config.dayConfig,
                     events = dateEvents,
                     selectedDate = clickedNewDate,
-                    isDisabled = config.disabledDates(date) || !isCurrentMonth,
+                    isDisabled = isDisabled,
                 )
             }
         }
     }
 }
 
+internal fun isDateOutOfBounds(
+    date: LocalDate,
+    minDate: LocalDate?,
+    maxDate: LocalDate?,
+): Boolean {
+    val beforeMin = minDate != null && date < minDate
+    val afterMax = maxDate != null && date > maxDate
+    return beforeMin || afterMax
+}
+
+/**
+ * Returns the first day of the week that contains [date], according to [startDayOfWeek].
+ *
+ * When [date] is the 1st of a month and that 1st is not [startDayOfWeek], the result lands
+ * in the **previous calendar month** (and possibly the previous year). Example with
+ * Monday-first weeks: 1 Jan 2026 is a Thursday → this returns Mon 29 Dec 2025.
+ */
+internal fun startOfWeekContaining(
+    date: LocalDate,
+    startDayOfWeek: DayOfWeek,
+): LocalDate {
+    val daysBack = (date.dayOfWeek.ordinal - startDayOfWeek.ordinal + 7) % 7
+    return date.minus(daysBack, DateTimeUnit.DAY)
+}
+
+/**
+ * Builds the full month grid for [currentMonth] (any day in that month is accepted as anchor).
+ *
+ * The first cell is always [startOfWeekContaining] the 1st of the month — so when the 1st is
+ * not the configured week start, leading cells are dates from the previous calendar month.
+ * Trailing cells fill through the end of the week that contains the last day of the month.
+ * Length is always a multiple of 7.
+ */
 internal fun getMonthDates(
     currentMonth: LocalDate,
-    startDayOfWeek: DayOfWeek
+    startDayOfWeek: DayOfWeek,
 ): List<LocalDate> {
     val firstDayOfMonth = currentMonth.minus(currentMonth.dayOfMonth - 1, DateTimeUnit.DAY)
     val lastDayOfMonth = firstDayOfMonth.plus(1, DateTimeUnit.MONTH).minus(1, DateTimeUnit.DAY)
-    val firstDayOffset = (firstDayOfMonth.dayOfWeek.ordinal - startDayOfWeek.ordinal + 7) % 7
-    return (-firstDayOffset until lastDayOfMonth.dayOfMonth).map {
-        firstDayOfMonth.plus(it.toLong(), DateTimeUnit.DAY)
+    val gridStart = startOfWeekContaining(firstDayOfMonth, startDayOfWeek)
+    val gridEnd = startOfWeekContaining(lastDayOfMonth, startDayOfWeek)
+        .plus(6, DateTimeUnit.DAY)
+
+    val dates = ArrayList<LocalDate>(42)
+    var cursor = gridStart
+    while (cursor <= gridEnd) {
+        dates += cursor
+        cursor = cursor.plus(1, DateTimeUnit.DAY)
     }
+    return dates
 }

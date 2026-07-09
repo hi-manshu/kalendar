@@ -44,6 +44,7 @@ import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
+import com.himanshoe.kalendar.foundation.action.isDateInteractable
 
 @Composable
 internal fun KalendarFirey(
@@ -53,7 +54,7 @@ internal fun KalendarFirey(
     onDaySelectionAction: OnDaySelectionAction = OnDaySelectionAction.NoOp,
     config: KalendarConfig = KalendarConfig(),
     controller: KalendarController? = null,
-    dayContent: (@Composable (date: LocalDate, isSelected: Boolean, events: List<KalendarEvent>) -> Unit)? = null,
+    dayContent: (@Composable (LocalDate, Boolean, List<KalendarEvent>, Boolean) -> Unit)? = null,
 ) {
     KalendarFireyContent(
         selectedDate = selectedDate,
@@ -74,7 +75,7 @@ private fun KalendarFireyContent(
     config: KalendarConfig,
     modifier: Modifier = Modifier,
     controller: KalendarController? = null,
-    dayContent: (@Composable (date: LocalDate, isSelected: Boolean, events: List<KalendarEvent>) -> Unit)? = null,
+    dayContent: (@Composable (LocalDate, Boolean, List<KalendarEvent>, Boolean) -> Unit)? = null,
 ) {
     val startDayOfWeek = config.startDayOfWeek
     val initialDate = config.firstVisibleDate ?: selectedDate
@@ -91,29 +92,33 @@ private fun KalendarFireyContent(
     }
     var clickedNewDate by remember { mutableStateOf(selectedDate) }
     var clickedNewDates by remember {
-        mutableStateOf(
-            if (config.initialSelectedDates.isNotEmpty()) config.initialSelectedDates
-            else listOf(selectedDate)
-        )
+        mutableStateOf(config.initialSelectedDates)
+    }
+    LaunchedEffect(selectedDate) {
+        clickedNewDate = selectedDate
     }
     val daysOfWeek = DayOfWeek.entries.rotate(startDayOfWeek.ordinal)
-    val displayDates by remember(currentDay) {
+    val displayDates by remember(currentDay, startDayOfWeek) {
         mutableStateOf(getWeekDates(currentDay, startDayOfWeek))
     }
     val eventsByDate = remember(events) { events.groupBy { it.date } }
+    val multiSelectDates = when (onDaySelectionAction) {
+        is OnDaySelectionAction.Multiple -> clickedNewDates
+        else -> emptyList()
+    }
 
     val canGoBack = config.minDate?.let { min ->
-        currentDay.minus(7, DateTimeUnit.DAY) >= min
+        getWeekDates(currentDay, startDayOfWeek).first() > min
     } ?: true
     val canGoForward = config.maxDate?.let { max ->
-        currentDay.plus(7, DateTimeUnit.DAY) <= max
+        getWeekDates(currentDay, startDayOfWeek).last() < max
     } ?: true
 
     DisposableEffect(controller) {
-        controller?.attachScrollImpl { date ->
+        val generation = controller?.attachScrollImpl { date ->
             currentDay = date
         }
-        onDispose { controller?.detachScrollImpl() }
+        onDispose { generation?.let { controller?.detachScrollImpl(it) } }
     }
 
     LaunchedEffect(currentDay) {
@@ -132,6 +137,9 @@ private fun KalendarFireyContent(
             showCalendarIcon = false,
             headerConfig = config.headerConfig,
             canNavigateBack = canGoBack,
+            canNavigateForward = canGoForward,
+            previousContentDescription = "Previous week",
+            nextContentDescription = "Next week",
             onPreviousClick = {
                 if (canGoBack) {
                     currentDay = currentDay.minus(7, DateTimeUnit.DAY)
@@ -151,35 +159,44 @@ private fun KalendarFireyContent(
             dates = { displayDates },
         ) { date ->
             val dateEvents = eventsByDate[date] ?: emptyList()
+            val isDisabled = !date.isDateInteractable(config, isPrimaryPeriod = true)
+            val isDateAllowed: (LocalDate) -> Boolean = { it.isDateInteractable(config) }
             if (dayContent != null) {
-                val isSelected = date == clickedNewDate || clickedNewDates.contains(date)
-                dayContent(date, isSelected, dateEvents)
+                val isSelected = when (onDaySelectionAction) {
+                    is OnDaySelectionAction.Multiple -> date in multiSelectDates
+                    is OnDaySelectionAction.Range ->
+                        selectedRange.value?.let { date in it } == true || date == clickedNewDate
+                    else -> date == clickedNewDate
+                }
+                dayContent(date, isSelected, dateEvents, isDisabled)
             } else {
                 KalendarDay(
                     date = date,
                     selectedRange = selectedRange.value,
-                    selectedDates = clickedNewDates,
+                    selectedDates = multiSelectDates,
                     onDayClick = { clickedDate, clickedEvents: List<KalendarEvent> ->
                         clickedDate.onDayClick(
                             events = clickedEvents,
+                            allEvents = events,
                             rangeStartDate = rangeStartDate,
                             rangeEndDate = rangeEndDate,
                             onDaySelectionAction = onDaySelectionAction,
                             onClickedNewDate = { clickedNewDate = it },
-                            onMultipleClickedNewDate = { date ->
+                            onMultipleClickedNewDate = { tapped ->
                                 clickedNewDates = clickedNewDates.toMutableList().apply {
-                                    if (clickedNewDates.contains(date)) remove(date) else add(date)
+                                    if (contains(tapped)) remove(tapped) else add(tapped)
                                 }
                             },
                             onClickedRangeStartDate = { rangeStartDate = it },
                             onClickedRangeEndDate = { rangeEndDate = it },
                             onUpdateSelectedRange = { selectedRange.value = it },
+                            isDateAllowed = isDateAllowed,
                         )
                     },
                     dayConfig = config.dayConfig,
                     events = dateEvents,
                     selectedDate = clickedNewDate,
-                    isDisabled = config.disabledDates(date),
+                    isDisabled = isDisabled,
                 )
             }
         }
@@ -187,10 +204,7 @@ private fun KalendarFireyContent(
 }
 
 internal fun getWeekDates(currentDay: LocalDate, startDayOfWeek: DayOfWeek): List<LocalDate> {
-    val startOfWeek = currentDay.minus(
-        (currentDay.dayOfWeek.ordinal - startDayOfWeek.ordinal + 7) % 7,
-        DateTimeUnit.DAY
-    )
+    val startOfWeek = startOfWeekContaining(currentDay, startDayOfWeek)
     return (0..6).map { startOfWeek.plus(it, DateTimeUnit.DAY) }
 }
 

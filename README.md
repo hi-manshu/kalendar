@@ -43,6 +43,10 @@ So unless you fancy scribbling your dates on a Howler, let Kalendar handle your 
 - **[Aerial](doc/Aerial.md)**: A spell that grants you the power to swipe through the calendar in
   WeekView, with the
   flick of a wand.
+- **[Yearly](doc/Yearly.md)**: A year-overview charm showing all twelve months at a glance.
+- **[Season](doc/Season.md)**: A seasonal enchantment — three meteorological months, tinted to the
+  season.
+- **[Agenda](doc/Agenda.md)**: An event list grouped by date, ready for daily briefings.
 
 ## 🎉 Getting Started
 

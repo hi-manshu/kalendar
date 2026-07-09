@@ -26,12 +26,14 @@ import kotlin.test.assertTrue
 class KalendarUtilsTest {
 
     @Test
-    fun getMonthDates_june2026_sundayStart_correctCount() {
+    fun getMonthDates_june2026_mondayStart_includesAllJuneDaysWithPadding() {
         val june = LocalDate(2026, 6, 1)
         val dates = getMonthDates(june, DayOfWeek.MONDAY)
-        assertEquals(30, dates.size)
+        assertEquals(0, dates.size % 7)
         assertEquals(LocalDate(2026, 6, 1), dates.first())
-        assertEquals(LocalDate(2026, 6, 30), dates.last())
+        val juneDates = dates.filter { it.month == Month.JUNE }
+        assertEquals(30, juneDates.size)
+        assertEquals(LocalDate(2026, 6, 30), juneDates.last())
     }
 
     @Test
@@ -72,8 +74,8 @@ class KalendarUtilsTest {
     @Test
     fun getWeekDates_sundayStart_firstDayIsSunday() {
         val wednesday = LocalDate(2026, 6, 11)
-        val week = getWeekDates(wednesday, DayOfWeek.MONDAY)
-        assertEquals(DayOfWeek.MONDAY, week.first().dayOfWeek)
+        val week = getWeekDates(wednesday, DayOfWeek.SUNDAY)
+        assertEquals(DayOfWeek.SUNDAY, week.first().dayOfWeek)
         assertEquals(DayOfWeek.SATURDAY, week.last().dayOfWeek)
     }
 
@@ -82,7 +84,36 @@ class KalendarUtilsTest {
         val wednesday = LocalDate(2026, 6, 11)
         val week = getWeekDates(wednesday, DayOfWeek.MONDAY)
         assertEquals(DayOfWeek.MONDAY, week.first().dayOfWeek)
-        assertEquals(DayOfWeek.MONDAY, week.last().dayOfWeek)
+        assertEquals(DayOfWeek.SUNDAY, week.last().dayOfWeek)
+    }
+
+    @Test
+    fun getMonthDates_padsToMultipleOfSeven() {
+        val dates = getMonthDates(LocalDate(2026, 6, 1), DayOfWeek.MONDAY)
+        assertEquals(0, dates.size % 7)
+    }
+
+    @Test
+    fun weeksBetweenAligned_sameWeek_isZero() {
+        val mon = LocalDate(2026, 6, 8)
+        val fri = LocalDate(2026, 6, 12)
+        assertEquals(0, weeksBetweenAligned(mon, fri, DayOfWeek.MONDAY))
+    }
+
+    @Test
+    fun weeksBetweenAligned_nextWeek_isOne() {
+        val mon = LocalDate(2026, 6, 8)
+        val nextMon = LocalDate(2026, 6, 15)
+        assertEquals(1, weeksBetweenAligned(mon, nextMon, DayOfWeek.MONDAY))
+    }
+
+    @Test
+    fun isDateOutOfBounds_respectsMinMax() {
+        val min = LocalDate(2026, 6, 1)
+        val max = LocalDate(2026, 6, 30)
+        assertTrue(isDateOutOfBounds(LocalDate(2026, 5, 31), min, max))
+        assertTrue(isDateOutOfBounds(LocalDate(2026, 7, 1), min, max))
+        assertTrue(!isDateOutOfBounds(LocalDate(2026, 6, 15), min, max))
     }
 
     @Test

@@ -17,6 +17,7 @@
 package com.himanshoe.kalendar
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,14 +29,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,7 +51,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastMap
+import com.himanshoe.kalendar.foundation.action.KalendarSelectedDayRange
 import com.himanshoe.kalendar.foundation.action.OnDaySelectionAction
+import com.himanshoe.kalendar.foundation.action.isDateInteractable
+import com.himanshoe.kalendar.foundation.action.isRangeFullyAllowed
 import com.himanshoe.kalendar.foundation.component.config.KalendarConfig
 import com.himanshoe.kalendar.foundation.component.config.KalendarHeaderConfig
 import com.himanshoe.kalendar.foundation.event.KalendarEvents
@@ -88,6 +95,8 @@ private fun KalendarAgendaContent(
                 )
             }
     }
+    var rangeStartDate by remember { mutableStateOf<LocalDate?>(config.initialSelectedRange?.start) }
+    var rangeEndDate by remember { mutableStateOf<LocalDate?>(config.initialSelectedRange?.endInclusive) }
 
     Box(
         modifier = modifier.background(brush = Brush.linearGradient(config.backgroundColor.value)),
@@ -100,16 +109,63 @@ private fun KalendarAgendaContent(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 groupedEvents.forEach { (date, dateEvents) ->
-                    item(key = date.toEpochDays()) {
+                    item(key = "header_${date.toEpochDays()}") {
                         AgendaDateHeader(date = date, headerConfig = config.headerConfig)
                     }
-                    items(
+                    itemsIndexed(
                         items = dateEvents,
-                        key = { event -> "${event.date}_${event.eventName}_${event.startTime}" },
-                    ) { event ->
-                        AgendaEventRow(event = event)
+                        key = { index, event ->
+                            "event_${date.toEpochDays()}_${index}_${event.eventName}"
+                        },
+                    ) { _, event ->
+                        AgendaEventRow(
+                            event = event,
+                            onClick = click@{
+                                if (!event.date.isDateInteractable(config)) return@click
+                                when (val action = onDaySelectionAction) {
+                                    is OnDaySelectionAction.Single ->
+                                        action.onDayClick(event.date, dateEvents)
+                                    is OnDaySelectionAction.Multiple ->
+                                        action.onDayClick(event.date, dateEvents)
+                                    is OnDaySelectionAction.Range -> {
+                                        val start = rangeStartDate
+                                        val end = rangeEndDate
+                                        if (start == null || end != null) {
+                                            rangeStartDate = event.date
+                                            rangeEndDate = null
+                                        } else {
+                                            var rangeStart = start
+                                            var rangeEnd = event.date
+                                            if (rangeStart > rangeEnd) {
+                                                val tmp = rangeStart
+                                                rangeStart = rangeEnd
+                                                rangeEnd = tmp
+                                            }
+                                            if (!isRangeFullyAllowed(
+                                                    rangeStart,
+                                                    rangeEnd,
+                                                    isDateAllowed = { it.isDateInteractable(config) },
+                                                )
+                                            ) {
+                                                return@click
+                                            }
+                                            rangeStartDate = rangeStart
+                                            rangeEndDate = rangeEnd
+                                            val range = KalendarSelectedDayRange(
+                                                start = rangeStart,
+                                                endInclusive = rangeEnd,
+                                            )
+                                            val eventsInRange = events.filter { it.date in range }
+                                            action.onRangeSelected(range, eventsInRange)
+                                        }
+                                    }
+                                }
+                            },
+                        )
                     }
-                    item { Spacer(modifier = Modifier.height(8.dp)) }
+                    item(key = "spacer_${date.toEpochDays()}") {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
             }
         }
@@ -136,11 +192,15 @@ private fun AgendaDateHeader(
 }
 
 @Composable
-private fun AgendaEventRow(event: KalendarEvent) {
+private fun AgendaEventRow(
+    event: KalendarEvent,
+    onClick: () -> Unit,
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 2.dp),
+            .padding(horizontal = 16.dp, vertical = 2.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFDF6F7)),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),

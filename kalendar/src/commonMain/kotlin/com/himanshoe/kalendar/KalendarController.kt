@@ -55,21 +55,29 @@ import kotlinx.datetime.LocalDate
 class KalendarController internal constructor() {
 
     private var scrollImpl: (suspend (LocalDate) -> Unit)? = null
+    private var attachGeneration: Int = 0
 
     /**
      * Registers the scroll implementation provided by the attached [Kalendar] composable.
      * Called internally via `DisposableEffect` when the composable enters composition.
+     *
+     * @return A generation token that must be passed to [detachScrollImpl] so a newer
+     * attach is not cleared when an older calendar leaves composition.
      */
-    internal fun attachScrollImpl(impl: suspend (LocalDate) -> Unit) {
+    internal fun attachScrollImpl(impl: suspend (LocalDate) -> Unit): Int {
+        val generation = ++attachGeneration
         scrollImpl = impl
+        return generation
     }
 
     /**
      * Clears the scroll implementation when the attached [Kalendar] composable leaves
-     * composition, preventing stale lambda captures from being invoked.
+     * composition, but only if [generation] is still the active attachment.
      */
-    internal fun detachScrollImpl() {
-        scrollImpl = null
+    internal fun detachScrollImpl(generation: Int) {
+        if (generation == attachGeneration) {
+            scrollImpl = null
+        }
     }
 
     /**

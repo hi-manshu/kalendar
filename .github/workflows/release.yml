@@ -43,6 +43,9 @@ jobs:
           distribution: zulu
           java-version: 17
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -51,42 +54,86 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Bump versions in gradle.properties
+      - name: Bump module VERSION_NAME
         run: |
-          [ -n "${{ github.event.inputs.version_foundation }}" ] && \
-            sed -i "s/^FOUNDATION_VERSION_NAME=.*/FOUNDATION_VERSION_NAME=${{ github.event.inputs.version_foundation }}/" gradle.properties
-          [ -n "${{ github.event.inputs.version_kalendar }}" ] && \
-            sed -i "s/^KALENDAR_VERSION_NAME=.*/KALENDAR_VERSION_NAME=${{ github.event.inputs.version_kalendar }}/" gradle.properties
-          [ -n "${{ github.event.inputs.version_sync }}" ] && \
-            sed -i "s/^SYNC_VERSION_NAME=.*/SYNC_VERSION_NAME=${{ github.event.inputs.version_sync }}/" gradle.properties
+          bump() {
+            local file="$1"
+            local version="$2"
+            local module="$3"
+            if [ -z "$version" ]; then
+              echo "Skipping $module (no version input)"
+              return 0
+            fi
+            if [ ! -f "$file" ]; then
+              echo "::error::Missing $file"
+              exit 1
+            fi
+            if ! grep -q '^VERSION_NAME=' "$file"; then
+              echo "::error::VERSION_NAME not found in $file"
+              exit 1
+            fi
+            sed -i "s/^VERSION_NAME=.*/VERSION_NAME=${version}/" "$file"
+            if ! grep -q "^VERSION_NAME=${version}$" "$file"; then
+              echo "::error::Failed to set VERSION_NAME=${version} in $file"
+              exit 1
+            fi
+            echo "Bumped $module → $version ($file)"
+          }
 
-      - name: Determine release tag
+          bump "kalendar-foundation/gradle.properties" \
+            "${{ github.event.inputs.version_foundation }}" "kalendar-foundation"
+          bump "kalendar/gradle.properties" \
+            "${{ github.event.inputs.version_kalendar }}" "kalendar"
+          bump "kalendar-sync/gradle.properties" \
+            "${{ github.event.inputs.version_sync }}" "kalendar-sync"
+
+          git diff --stat
+
+      - name: Determine release tags
         id: tag
         run: |
-          # Use the first non-empty version as the primary release tag (preference order)
-          TAG=""
-          for V in "${{ github.event.inputs.version_kalendar }}" \
-                   "${{ github.event.inputs.version_foundation }}" \
-                   "${{ github.event.inputs.version_sync }}"; do
-            if [ -n "$V" ]; then TAG="$V"; break; fi
-          done
-          echo "tag=v${TAG}" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          : > release-tags.txt
+          TITLE_PARTS=()
 
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          add_tag() {
+            local module="$1"
+            local version="$2"
+            if [ -z "$version" ]; then return 0; fi
+            local t="${module}-v${version}"
+            if git rev-parse -q --verify "refs/tags/${t}" >/dev/null; then
+              echo "::error::Tag already exists: ${t}"
+              exit 1
+            fi
+            echo "$t" >> release-tags.txt
+            TITLE_PARTS+=("${module} ${version}")
+            echo "Will create tag: ${t}"
+          }
 
-      - name: Commit version bumps
-        run: |
-          git add gradle.properties
-          git commit -m "Release ${{ steps.tag.outputs.tag }}"
+          add_tag "kalendar" "${{ github.event.inputs.version_kalendar }}"
+          add_tag "kalendar-foundation" "${{ github.event.inputs.version_foundation }}"
+          add_tag "kalendar-sync" "${{ github.event.inputs.version_sync }}"
 
-      - name: Create and push tag
+          PRIMARY=$(head -n 1 release-tags.txt)
+          TITLE=$(IFS=', '; echo "${TITLE_PARTS[*]}")
+
+          echo "primary=${PRIMARY}" >> "$GITHUB_OUTPUT"
+          echo "title=${TITLE}" >> "$GITHUB_OUTPUT"
+          echo "Release tags:"
+          cat release-tags.txt
+          echo "Primary: ${PRIMARY}"
+          echo "Title: ${TITLE}"
+
+      - name: Verify build before publish
         run: |
-          git tag "${{ steps.tag.outputs.tag }}"
-          git push origin HEAD:${{ github.ref_name }}
-          git push origin "${{ steps.tag.outputs.tag }}"
+          ./gradlew detekt \
+            :kalendar:desktopTest \
+            :kalendar-foundation:desktopTest \
+            :kalendar-sync:desktopTest \
+            :kalendar:compileKotlinWasmJs \
+            :kalendar-foundation:compileKotlinWasmJs \
+            :kalendar-sync:compileKotlinWasmJs \
+            --stacktrace
 
       - name: Publish to Maven Central
         env:
@@ -103,43 +150,105 @@ jobs:
             TASKS="$TASKS :kalendar:publishAllPublicationsToMavenCentralRepository"
           [ -n "${{ github.event.inputs.version_sync }}" ] && \
             TASKS="$TASKS :kalendar-sync:publishAllPublicationsToMavenCentralRepository"
-          ./gradlew $TASKS --no-configuration-cache
+          echo "Publishing tasks:$TASKS"
+          ./gradlew $TASKS --no-configuration-cache --stacktrace
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit version bumps
+        run: |
+          git add \
+            kalendar/gradle.properties \
+            kalendar-foundation/gradle.properties \
+            kalendar-sync/gradle.properties
+          git commit -m "Release ${{ steps.tag.outputs.title }}"
+
+      - name: Create and push per-module tags
+        run: |
+          set -euo pipefail
+          while IFS= read -r T; do
+            [ -z "$T" ] && continue
+            git tag "$T"
+            echo "Created tag $T"
+          done < release-tags.txt
+
+          git push origin HEAD:${{ github.ref_name }}
+
+          while IFS= read -r T; do
+            [ -z "$T" ] && continue
+            git push origin "$T"
+          done < release-tags.txt
 
       - name: Build release summary
         id: summary
         run: |
-          MODULES=""
-          [ -n "${{ github.event.inputs.version_foundation }}" ] && \
-            MODULES="${MODULES}- \`kalendar-foundation\` → \`${{ github.event.inputs.version_foundation }}\`\n"
-          [ -n "${{ github.event.inputs.version_kalendar }}" ] && \
-            MODULES="${MODULES}- \`kalendar\` → \`${{ github.event.inputs.version_kalendar }}\`\n"
-          [ -n "${{ github.event.inputs.version_sync }}" ] && \
-            MODULES="${MODULES}- \`kalendar-sync\` → \`${{ github.event.inputs.version_sync }}\`\n"
-          echo "modules=$MODULES" >> "$GITHUB_OUTPUT"
+          {
+            echo "modules<<EOF"
+            [ -n "${{ github.event.inputs.version_foundation }}" ] && \
+              echo "- \`kalendar-foundation\` → \`${{ github.event.inputs.version_foundation }}\` (tag \`kalendar-foundation-v${{ github.event.inputs.version_foundation }}\`)"
+            [ -n "${{ github.event.inputs.version_kalendar }}" ] && \
+              echo "- \`kalendar\` → \`${{ github.event.inputs.version_kalendar }}\` (tag \`kalendar-v${{ github.event.inputs.version_kalendar }}\`)"
+            [ -n "${{ github.event.inputs.version_sync }}" ] && \
+              echo "- \`kalendar-sync\` → \`${{ github.event.inputs.version_sync }}\` (tag \`kalendar-sync-v${{ github.event.inputs.version_sync }}\`)"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Generate release notes from commits
         run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$PREV_TAG" ]; then
-            COMMITS=$(git log "${PREV_TAG}..HEAD~1" --pretty=format:"- %s" --no-merges)
-            printf "## Modules\n\n${{ steps.summary.outputs.modules }}\n## Changes\n\n%s" "$COMMITS" > release_notes.txt
-          else
-            printf "## Modules\n\n${{ steps.summary.outputs.modules }}" > release_notes.txt
-          fi
+          PREV_TAG=$(git describe --tags --abbrev=0 --match 'kalendar-v*' HEAD^ 2>/dev/null \
+            || git describe --tags --abbrev=0 HEAD^ 2>/dev/null \
+            || echo "")
+          {
+            echo "## Modules"
+            echo ""
+            echo "${{ steps.summary.outputs.modules }}"
+            echo ""
+            echo "## Tags"
+            echo ""
+            while IFS= read -r T; do
+              [ -z "$T" ] && continue
+              echo "- \`$T\`"
+            done < release-tags.txt
+            echo ""
+            if [ -n "$PREV_TAG" ]; then
+              echo "## Changes since \`${PREV_TAG}\`"
+              echo ""
+              git log "${PREV_TAG}..HEAD~1" --pretty=format:"- %s" --no-merges
+              echo ""
+            fi
+          } > release_notes.txt
+          cat release_notes.txt
 
-      - name: Create GitHub Release
+      - name: Create GitHub Releases (one per module tag)
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
+          set -euo pipefail
           PRERELEASE=""
           for V in "${{ github.event.inputs.version_foundation }}" \
                    "${{ github.event.inputs.version_kalendar }}" \
                    "${{ github.event.inputs.version_sync }}"; do
-            if echo "$V" | grep -qi "rc\|alpha\|beta"; then
-              PRERELEASE="--prerelease"; break
+            if echo "$V" | grep -qiE 'rc|alpha|beta'; then
+              PRERELEASE="--prerelease"
+              break
             fi
           done
-          gh release create "${{ steps.tag.outputs.tag }}" \
-            --title "${{ steps.tag.outputs.tag }}" \
-            --notes-file release_notes.txt \
-            $PRERELEASE
+
+          # One GitHub Release per module tag → Maven artifact ↔ git tag is 1:1
+          while IFS= read -r T; do
+            [ -z "$T" ] && continue
+            {
+              echo "## ${T}"
+              echo ""
+              cat release_notes.txt
+            } > "notes-${T}.txt"
+
+            gh release create "$T" \
+              --title "$T" \
+              --notes-file "notes-${T}.txt" \
+              $PRERELEASE
+            echo "Created GitHub Release for $T"
+          done < release-tags.txt

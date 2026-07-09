@@ -53,10 +53,28 @@ class KalendarSelectedDayRangeTest {
     @Test
     fun validRange_acrossYears() {
         val start = LocalDate(2026, 12, 30)
-        val end = LocalDate(2026, 1, 3)
+        val end = LocalDate(2027, 1, 3)
         val range = KalendarSelectedDayRange(start = start, endInclusive = end)
         assertEquals(start, range.start)
         assertEquals(end, range.endInclusive)
+        assertTrue(LocalDate(2027, 1, 1) in range)
+    }
+
+    @Test
+    fun inOperator_dateOutsideRange_false() {
+        val range = KalendarSelectedDayRange(
+            start = LocalDate(2026, 6, 1),
+            endInclusive = LocalDate(2026, 6, 30),
+        )
+        assertTrue(LocalDate(2026, 5, 31) !in range)
+        assertTrue(LocalDate(2026, 7, 1) !in range)
+    }
+
+    @Test
+    fun equality_sameBounds() {
+        val a = KalendarSelectedDayRange(LocalDate(2026, 1, 1), LocalDate(2026, 1, 10))
+        val b = KalendarSelectedDayRange(LocalDate(2026, 1, 1), LocalDate(2026, 1, 10))
+        assertEquals(a, b)
     }
 
     @Test

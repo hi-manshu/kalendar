@@ -1,36 +1,144 @@
 name: Dokka Documentation
-on: workflow_dispatch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'kalendar/**'
+      - 'kalendar-foundation/**'
+      - 'kalendar-sync/**'
+      - 'doc/**'
+      - 'README.md'
+      - '**/build.gradle.kts'
+      - 'gradle.properties'
+      - 'gradle/**'
+      - '.github/workflows/run-dokka.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-docs
+  cancel-in-progress: true
 
 jobs:
-  run:
+  docs:
+    name: Build & deploy docs
     runs-on: ubuntu-latest
+
     steps:
-      - name: checkout
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Set up JDK
-        uses: actions/setup-java@v3
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
+          distribution: zulu
           java-version: 17
-          distribution: 'zulu'
 
-      - name: Grant Permission to Execute Gradle
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build with Gradle
-        uses: gradle/gradle-build-action@v2
-        with:
-          arguments: build dokkaHtmlMultiModule
-
-      - name: Gather API Documentation
+      - name: Generate Dokka HTML (per module)
         run: |
-          mkdir gh-pages
-          mkdir gh-pages/docs
-          mv README.md gh-pages/
-          mv docs/*.md gh-pages/docs
+          set -euo pipefail
+          TASKS_OUT=$(./gradlew :kalendar:tasks --all 2>/dev/null || true)
+          if echo "$TASKS_OUT" | grep -qE 'dokkaHtml[[:space:]]'; then
+            TASK=dokkaHtml
+          elif echo "$TASKS_OUT" | grep -qE 'dokkaGenerateHtml[[:space:]]'; then
+            TASK=dokkaGenerateHtml
+          else
+            echo "::error::Neither dokkaHtml nor dokkaGenerateHtml found"
+            echo "$TASKS_OUT" | grep -i dokka || true
+            exit 1
+          fi
+          echo "Using Dokka task: $TASK"
+          ./gradlew \
+            ":kalendar:${TASK}" \
+            ":kalendar-foundation:${TASK}" \
+            ":kalendar-sync:${TASK}" \
+            --stacktrace
 
-      - name: Publish Documentation
-        uses: JamesIves/github-pages-deploy-action@v4.4.2
+      - name: Assemble gh-pages content
+        run: |
+          set -euo pipefail
+          rm -rf gh-pages
+          mkdir -p gh-pages/api gh-pages/doc
+          cp README.md gh-pages/
+          cp doc/*.md gh-pages/doc/
+
+          copy_dokka() {
+            local module="$1"
+            local dest="gh-pages/api/${module}"
+            local src=""
+            for candidate in \
+              "${module}/build/dokka/html" \
+              "${module}/build/dokka/htmlMultiModule" \
+              "${module}/build/dokka"
+            do
+              if [ -f "${candidate}/index.html" ]; then
+                src="${candidate}"
+                break
+              fi
+            done
+            if [ -z "${src}" ]; then
+              src=$(find "${module}/build" -type f -name 'index.html' \( -path '*/dokka/*' -o -path '*/dokkaHtml/*' \) 2>/dev/null | head -n 1 | xargs -r dirname || true)
+            fi
+            if [ -z "${src}" ] || [ ! -d "${src}" ]; then
+              echo "::error::No Dokka HTML found for ${module}"
+              find "${module}/build" -type d \( -name '*dokka*' -o -name 'html' \) 2>/dev/null | head -40 || true
+              find "${module}/build" -name 'index.html' 2>/dev/null | head -20 || true
+              exit 1
+            fi
+            mkdir -p "${dest}"
+            cp -a "${src}"/. "${dest}"/
+            echo "Copied Dokka for ${module} from ${src}"
+          }
+
+          copy_dokka kalendar
+          copy_dokka kalendar-foundation
+          copy_dokka kalendar-sync
+
+          # Index page (printf avoids YAML/heredoc pitfalls)
+          {
+            echo '<!DOCTYPE html>'
+            echo '<html lang="en"><head><meta charset="utf-8" />'
+            echo '<title>Kalendar Documentation</title>'
+            echo '<style>body{font-family:system-ui,sans-serif;max-width:42rem;margin:2rem auto;padding:0 1rem;line-height:1.5}</style>'
+            echo '</head><body>'
+            echo '<h1>Kalendar Documentation</h1>'
+            echo '<p>Compose Multiplatform calendar library.</p>'
+            echo '<h2>API (Dokka)</h2><ul>'
+            echo '<li><a href="api/kalendar/">kalendar</a></li>'
+            echo '<li><a href="api/kalendar-foundation/">kalendar-foundation</a></li>'
+            echo '<li><a href="api/kalendar-sync/">kalendar-sync</a></li>'
+            echo '</ul><h2>Guides</h2><ul>'
+            echo '<li><a href="doc/Oceanic.md">Oceanic</a></li>'
+            echo '<li><a href="doc/Firey.md">Firey</a></li>'
+            echo '<li><a href="doc/Solaris.md">Solaris</a></li>'
+            echo '<li><a href="doc/Aerial.md">Aerial</a></li>'
+            echo '<li><a href="doc/Yearly.md">Yearly</a></li>'
+            echo '<li><a href="doc/Season.md">Season</a></li>'
+            echo '<li><a href="doc/Agenda.md">Agenda</a></li>'
+            echo '<li><a href="doc/Config.md">Config</a></li>'
+            echo '</ul><p><a href="README.md">README</a></p>'
+            echo '</body></html>'
+          } > gh-pages/index.html
+
+          echo "gh-pages tree:"
+          find gh-pages -maxdepth 3 \( -type f -o -type d \) | head -80
+
+      - name: Publish to gh-pages
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
           folder: gh-pages
+          clean: true

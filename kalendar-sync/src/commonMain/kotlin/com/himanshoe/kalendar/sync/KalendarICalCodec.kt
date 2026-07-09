@@ -51,6 +51,7 @@ internal object KalendarICalCodec {
             appendLine("DTSTART;VALUE=DATE:${event.date.toIcalDate()}")
             appendLine("DTEND;VALUE=DATE:${event.date.plusDays(1).toIcalDate()}")
         } else {
+            // Floating local date-time (no Z) — wall-clock time without claiming UTC
             val startTime = event.startTime ?: LocalTime(0, 0)
             val endTime = event.endTime ?: LocalTime(23, 59)
             appendLine("DTSTART:${LocalDateTime(event.date, startTime).toIcalDateTime()}")
@@ -148,14 +149,17 @@ internal object KalendarICalCodec {
         return Triple(key, params, value)
     }
 
+    // padStart — String.format is JVM-only; this must stay KMP (incl. wasmJs)
+    private fun pad2(n: Int): String = n.toString().padStart(2, '0')
+    private fun pad4(n: Int): String = n.toString().padStart(4, '0')
+
     private fun LocalDate.toIcalDate(): String =
-        "%04d%02d%02d".format(year, monthNumber, dayOfMonth)
+        "${pad4(year)}${pad2(monthNumber)}${pad2(dayOfMonth)}"
 
     private fun LocalDateTime.toIcalDateTime(): String =
-        "%04d%02d%02dT%02d%02d%02dZ".format(
-            date.year, date.monthNumber, date.dayOfMonth,
-            hour, minute, second
-        )
+        // Floating local time (omit Z) so importers treat values as wall-clock local, not UTC
+        "${pad4(date.year)}${pad2(date.monthNumber)}${pad2(date.dayOfMonth)}" +
+            "T${pad2(hour)}${pad2(minute)}${pad2(second)}"
 
     private fun parseIcalDate(value: String): LocalDate? = runCatching {
         val v = value.substringBefore('T').filter { it.isDigit() }

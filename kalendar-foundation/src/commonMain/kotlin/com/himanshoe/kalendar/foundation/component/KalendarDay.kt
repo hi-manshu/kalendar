@@ -35,6 +35,13 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -66,12 +73,12 @@ import kotlinx.datetime.todayIn
  *   start and end dates inclusively.
  * @param selectedDate The single currently selected date used for
  *   [OnDaySelectionAction.Single][com.himanshoe.kalendar.foundation.action.OnDaySelectionAction.Single] mode.
- *   Defaults to [date] (no selection).
+ *   When `null`, single-selection highlight is not applied (only [selectedDates] / range).
  * @param events The list of events that fall on [date]. Up to three indicator dots are shown;
  *   per-event colour from [KalendarEvent.eventColor] is used when available.
  * @param dayConfig Visual configuration (size, colours, text style) for the day cell.
  * @param isDisabled When `true` the cell is rendered at reduced opacity and taps are ignored.
- *   Typically driven by [com.himanshoe.kalendar.foundation.component.config.KalendarConfig.disabledDates].
+ *   Typically driven by [com.himanshoe.kalendar.foundation.action.isDateInteractable].
  * @param onDayClick Callback invoked when the user taps an enabled cell. Receives the tapped
  *   [LocalDate] and the events on that date.
  */
@@ -81,7 +88,7 @@ fun KalendarDay(
     modifier: Modifier = Modifier,
     selectedDates: List<LocalDate> = emptyList(),
     selectedRange: KalendarSelectedDayRange? = null,
-    selectedDate: LocalDate = date,
+    selectedDate: LocalDate? = null,
     events: KalendarEvents = emptyList(),
     dayConfig: KalendarDayConfig = KalendarDayConfig(),
     isDisabled: Boolean = false,
@@ -106,7 +113,7 @@ private fun KalendarDayContent(
     modifier: Modifier = Modifier,
     selectedDates: List<LocalDate> = emptyList(),
     selectedRange: KalendarSelectedDayRange? = null,
-    selectedDate: LocalDate = date,
+    selectedDate: LocalDate? = null,
     dayConfig: KalendarDayConfig = KalendarDayConfig(),
     events: KalendarEvents = emptyList(),
     isDisabled: Boolean = false,
@@ -116,7 +123,7 @@ private fun KalendarDayContent(
         Clock.System.todayIn(TimeZone.currentSystemDefault())
     }
     val currentDay = today == date
-    val selected = date == selectedDate || selectedDates.contains(date)
+    val selected = (selectedDate != null && date == selectedDate) || selectedDates.contains(date)
     val brush = remember(selected) {
         if (selected) {
             Brush.linearGradient(dayConfig.selectedTextColor.value)
@@ -126,8 +133,30 @@ private fun KalendarDayContent(
     }
     val fontWeight = remember(selected) { if (selected) FontWeight.Bold else FontWeight.Normal }
 
+    val dayNumber = date.dayOfMonth
+    val dayYear = date.year
+    val monthLabel = date.month.name.lowercase()
+    val dayDescription = buildString {
+        append("Day ")
+        append(dayNumber)
+        append(' ')
+        append(monthLabel)
+        append(' ')
+        append(dayYear)
+        if (selected) append(", selected")
+        if (isDisabled) append(", disabled")
+        if (currentDay) append(", today")
+    }
+    val dayTestTag = "kalendar-day-" + date.toString()
     Column(
         modifier = modifier
+            .semantics(mergeDescendants = true) {
+                contentDescription = dayDescription
+                testTag = dayTestTag
+                role = Role.Button
+                this.selected = selected
+                if (isDisabled) disabled()
+            }
             .alpha(if (isDisabled) 0.38f else 1f)
             .border(
                 border = getBorderStroke(

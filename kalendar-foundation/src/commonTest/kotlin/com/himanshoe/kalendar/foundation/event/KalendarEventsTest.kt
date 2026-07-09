@@ -17,8 +17,11 @@
 package com.himanshoe.kalendar.foundation.event
 
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class KalendarEventsTest {
@@ -78,5 +81,58 @@ class KalendarEventsTest {
         )
         assertEquals(date1, event.date)
         assertEquals("Test", event.eventName)
+    }
+
+    @Test
+    fun groupByDate_forCalendarIndicators() {
+        val events = listOf(
+            BasicKalendarEvent(date = date1, eventName = "A"),
+            BasicKalendarEvent(date = date1, eventName = "B"),
+            BasicKalendarEvent(date = date2, eventName = "C"),
+        )
+        val byDate = events.groupBy { it.date }
+        assertEquals(2, byDate[date1]?.size)
+        assertEquals(1, byDate[date2]?.size)
+    }
+
+    @Test
+    fun sortByStartTime_nullsLast() {
+        val morning = BasicKalendarEvent(
+            date = date1,
+            eventName = "Morning",
+            startTime = LocalDateTime(date1, LocalTime(9, 0)),
+        )
+        val noTime = BasicKalendarEvent(date = date1, eventName = "All day")
+        val afternoon = BasicKalendarEvent(
+            date = date1,
+            eventName = "Afternoon",
+            startTime = LocalDateTime(date1, LocalTime(14, 0)),
+        )
+        val sorted = listOf(afternoon, noTime, morning)
+            .sortedWith(compareBy(nullsLast()) { it.startTime })
+        assertEquals(listOf("Morning", "Afternoon", "All day"), sorted.map { it.eventName })
+    }
+
+    @Test
+    fun filterEventsInClosedRange() {
+        val events = listOf(
+            BasicKalendarEvent(date = LocalDate(2026, 6, 1), eventName = "A"),
+            BasicKalendarEvent(date = LocalDate(2026, 6, 15), eventName = "B"),
+            BasicKalendarEvent(date = LocalDate(2026, 6, 30), eventName = "C"),
+            BasicKalendarEvent(date = LocalDate(2026, 7, 1), eventName = "D"),
+        )
+        val start = LocalDate(2026, 6, 10)
+        val end = LocalDate(2026, 6, 30)
+        val inRange = events.filter { it.date in start..end }
+        assertEquals(listOf("B", "C"), inRange.map { it.eventName })
+    }
+
+    @Test
+    fun optionalFields_defaultNull() {
+        val event = BasicKalendarEvent(date = date1, eventName = "X")
+        assertNull(event.eventDescription)
+        assertNull(event.startTime)
+        assertNull(event.endTime)
+        assertNull(event.eventColor)
     }
 }

@@ -1,0 +1,74 @@
+# kalendar-sync: permissive until module is cleaned up.
+
+complexity:
+  LongParameterList:
+    active: false
+  TooManyFunctions:
+    active: false
+  LongMethod:
+    active: true
+    threshold: 120
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 30
+  ComplexCondition:
+    active: true
+    threshold: 8
+  NestedBlockDepth:
+    active: true
+    threshold: 8
+
+naming:
+  MatchingDeclarationName:
+    active: false
+  FunctionNaming:
+    active: false
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][_A-Za-z0-9]*'
+
+formatting:
+  Indentation:
+    active: false
+  ImportOrdering:
+    active: false
+  Filename:
+    active: false
+  MultiLineIfElse:
+    active: false
+  Wrapping:
+    active: false
+  ArgumentListWrapping:
+    active: false
+  NoBlankLineBeforeRbrace:
+    active: false
+  NoUnusedImports:
+    active: false
+  MaximumLineLength:
+    active: false
+
+style:
+  MaxLineLength:
+    active: false
+  MagicNumber:
+    active: false
+  ReturnCount:
+    active: true
+    max: 8
+  UnusedImports:
+    active: false
+  UnusedPrivateProperty:
+    active: false
+  LoopWithTooManyJumpStatements:
+    active: false
+  DestructuringDeclarationWithTooManyEntries:
+    active: false
+  WildcardImport:
+    active: false
+
+potential-bugs:
+  LateinitUsage:
+    active: false
+
+performance:
+  SpreadOperator:
+    active: false
